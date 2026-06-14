@@ -58,6 +58,13 @@ func redactAttr(_ []string, a slog.Attr) slog.Attr {
 }
 
 func isSensitiveKey(key string) bool {
+	return IsSensitiveKey(key)
+}
+
+// IsSensitiveKey reports whether a field name looks sensitive (case-insensitive
+// substring match against the known-sensitive fragments). Exported so other
+// redactors (e.g. the events writer) apply the same policy.
+func IsSensitiveKey(key string) bool {
 	k := strings.ToLower(key)
 	for _, frag := range sensitiveKeys {
 		if strings.Contains(k, frag) {

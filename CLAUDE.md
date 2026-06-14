@@ -74,7 +74,8 @@ FitCoach/
 │   │   │   ├── config/          env/secrets loading (Claude key lives here at runtime)
 │   │   │   ├── db/              MySQL connection, tx helpers, migration runner
 │   │   │   ├── httpx/           router, middleware, error/JSON helpers
-│   │   │   └── logging/         structured logging (redacts secrets & PII)
+│   │   │   ├── logging/         structured logging (redacts secrets & PII)
+│   │   │   └── events/          generation/safety audit-event writer (redacted)  (E15-S3)
 │   │   ├── auth/              accounts, sessions, password reset, deletion      (E1)
 │   │   ├── consent/           health-data / disclaimer consent capture          (E1)
 │   │   ├── memory/            Coach Memory store + prompt assembly              (E3)
