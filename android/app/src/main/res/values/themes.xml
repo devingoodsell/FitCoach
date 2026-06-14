@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Activity-level theme; the actual UI styling lives in the Compose theme
+         (core/designsystem/Theme.kt). NoActionBar so Compose owns the window. -->
+    <style name="Theme.FitCoach" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

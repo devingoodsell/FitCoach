@@ -1,0 +1,51 @@
+package pro.d11l.fitcoach.core.network
+
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.HTTP
+import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
+
+/**
+ * Typed client for OUR backend. The app never calls Anthropic directly; the
+ * Claude key lives only server-side.
+ */
+interface FitCoachApi {
+
+    @POST("auth/signup")
+    suspend fun signup(@Body body: Credentials): Response<TokenPair>
+
+    @POST("auth/login")
+    suspend fun login(@Body body: Credentials): Response<TokenPair>
+
+    @POST("auth/refresh")
+    suspend fun refresh(@Body body: RefreshRequest): Response<TokenPair>
+
+    @POST("auth/logout")
+    suspend fun logout(@Body body: RefreshRequest): Response<Unit>
+
+    @POST("auth/reset/request")
+    suspend fun requestReset(@Body body: ResetRequest): Response<Unit>
+
+    @GET("consent")
+    suspend fun listConsent(): Response<ConsentList>
+
+    @POST("consent")
+    suspend fun recordConsent(@Body body: ConsentRequest): Response<ConsentRecord>
+
+    @GET("memory")
+    suspend fun memory(): Response<MemorySections>
+
+    @PUT("memory/{section}")
+    suspend fun putSection(
+        @Path("section") section: String,
+        @Body body: PutSectionRequest,
+    ): Response<MemorySection>
+
+    // DELETE with a body: HTTP annotation allows it where @DELETE does not.
+    @HTTP(method = "DELETE", path = "account", hasBody = true)
+    suspend fun deleteAccount(@Body body: DeleteAccountRequest): Response<Unit>
+}

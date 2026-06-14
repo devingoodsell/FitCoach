@@ -52,8 +52,10 @@ FitCoach/
 │       │   │   │   ├── auth/        token storage (Android Keystore), session state
 │       │   │   │   ├── db/          Room database, DAOs, offline cache + sync queue
 │       │   │   │   └── designsystem/  Compose theme, reusable components, disclaimers
+│       │   │   ├── di/           manual dependency container + ViewModel factory
 │       │   │   ├── feature/       one package per user-facing feature (screens + VMs)
-│       │   │   │   ├── auth/         signup, login, password reset, consent  (E1)
+│       │   │   │   ├── auth/         signup, login, password reset             (E1)
+│       │   │   │   ├── consent/      health-data consent + manual-mode choice  (E1)
 │       │   │   │   ├── onboarding/   adaptive onboarding wizard               (E2)
 │       │   │   │   ├── readiness/    readiness display + explanation          (E4)
 │       │   │   │   ├── injury/       injury entry/lifecycle/assist            (E7)
