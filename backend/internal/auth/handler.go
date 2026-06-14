@@ -2,7 +2,11 @@ package auth
 
 import (
 	"errors"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
 	"pro.d11l.fitcoach/backend/internal/platform/logging"
@@ -11,15 +15,27 @@ import (
 // deviceLabelHeader lets a client tag its session for the multi-device list.
 const deviceLabelHeader = "X-Device-Label"
 
+// Auth backoff defaults: block a key after this many consecutive failures, for
+// this long. Applied per account and per client IP.
+const (
+	maxAuthFailures = 5
+	authCooldown    = 15 * time.Minute
+)
+
 // Handler exposes the auth HTTP endpoints.
 type Handler struct {
-	svc    *Service
-	logger *logging.Logger
+	svc     *Service
+	logger  *logging.Logger
+	limiter *Limiter
 }
 
-// NewHandler wires a Handler.
+// NewHandler wires a Handler with a default failure-backoff limiter.
 func NewHandler(svc *Service, logger *logging.Logger) *Handler {
-	return &Handler{svc: svc, logger: logger}
+	return &Handler{
+		svc:     svc,
+		logger:  logger,
+		limiter: NewLimiter(maxAuthFailures, authCooldown, nil),
+	}
 }
 
 // Register attaches auth routes to the router.
@@ -71,17 +87,55 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	emailKey := "login:email:" + normalizeEmail(req.Email)
+	ipKey := "login:ip:" + clientIP(r)
+	if h.throttled(w, emailKey, ipKey) {
+		return
+	}
+
 	tokens, err := h.svc.Login(r.Context(), req.Email, req.Password, r.Header.Get(deviceLabelHeader))
 	switch {
 	case err == nil:
+		h.limiter.Reset(emailKey)
+		h.limiter.Reset(ipKey)
 		httpx.WriteJSON(w, http.StatusOK, tokens)
 	case errors.Is(err, ErrInvalidCredentials):
+		h.limiter.Fail(emailKey)
+		h.limiter.Fail(ipKey)
 		// Generic: do not reveal whether the email or the password was wrong.
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid_credentials", "incorrect email or password")
 	default:
 		h.logger.Error("login failed", "error", err.Error())
 		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "something went wrong")
 	}
+}
+
+// throttled writes a 429 with Retry-After and returns true if any key is blocked.
+func (h *Handler) throttled(w http.ResponseWriter, keys ...string) bool {
+	for _, k := range keys {
+		if blocked, retryAfter := h.limiter.Retry(k); blocked {
+			secs := int(retryAfter.Seconds()) + 1
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+			httpx.WriteError(w, http.StatusTooManyRequests, "too_many_attempts",
+				"too many attempts; please try again later")
+			return true
+		}
+	}
+	return false
+}
+
+// clientIP extracts the caller's IP, honoring a single X-Forwarded-For hop when
+// present (set by our own proxy), else falling back to RemoteAddr.
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		first, _, _ := strings.Cut(xff, ",")
+		return strings.TrimSpace(first)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
