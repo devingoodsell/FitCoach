@@ -63,7 +63,7 @@ func run(args []string) error {
 		JWTKey:     []byte(cfg.JWTSigningKey.Reveal()),
 		AccessTTL:  cfg.AccessTokenTTL,
 		RefreshTTL: cfg.RefreshTokenTTL,
-	}, nil)
+	}, auth.NewLogMailer(logger), nil)
 	authHandler := auth.NewHandler(authSvc, logger)
 
 	router := httpx.NewRouter()

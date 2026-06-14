@@ -44,6 +44,8 @@ func (h *Handler) Register(r *httpx.Router) {
 	r.HandleFunc("POST /auth/login", h.login)
 	r.HandleFunc("POST /auth/logout", h.logout)
 	r.HandleFunc("POST /auth/refresh", h.refresh)
+	r.HandleFunc("POST /auth/reset/request", h.resetRequest)
+	r.HandleFunc("POST /auth/reset/confirm", h.resetConfirm)
 }
 
 type credentials struct {
@@ -106,6 +108,60 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid_credentials", "incorrect email or password")
 	default:
 		h.logger.Error("login failed", "error", err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "something went wrong")
+	}
+}
+
+type resetRequestBody struct {
+	Email string `json:"email"`
+}
+
+func (h *Handler) resetRequest(w http.ResponseWriter, r *http.Request) {
+	var req resetRequestBody
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "malformed request body")
+		return
+	}
+
+	// Throttle reset spam per IP and per email, but always respond 200 so the
+	// caller cannot enumerate accounts via timing or status differences.
+	ipKey := "reset:ip:" + clientIP(r)
+	emailKey := "reset:email:" + normalizeEmail(req.Email)
+	if blocked, _ := h.limiter.Retry(ipKey); !blocked {
+		if blocked, _ := h.limiter.Retry(emailKey); !blocked {
+			if err := h.svc.RequestPasswordReset(r.Context(), req.Email); err != nil {
+				h.logger.Error("reset request failed", "error", err.Error())
+			}
+			h.limiter.Fail(ipKey)
+			h.limiter.Fail(emailKey)
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+type resetConfirmBody struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
+func (h *Handler) resetConfirm(w http.ResponseWriter, r *http.Request) {
+	var req resetConfirmBody
+	if err := httpx.DecodeJSON(r, &req); err != nil || req.Token == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "token and new_password are required")
+		return
+	}
+
+	err := h.svc.ConfirmPasswordReset(r.Context(), req.Token, req.NewPassword)
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, ErrWeakPassword):
+		httpx.WriteError(w, http.StatusBadRequest, "weak_password",
+			"password must be at least 10 characters and mix letters with numbers or symbols")
+	case errors.Is(err, ErrInvalidResetToken):
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_token", "this reset link is invalid or has expired")
+	default:
+		h.logger.Error("reset confirm failed", "error", err.Error())
 		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "something went wrong")
 	}
 }

@@ -18,7 +18,13 @@ type accountStore interface {
 	GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, tokenHash string, now time.Time) error
 	RevokeAllUserTokens(ctx context.Context, userID uuid.UUID, now time.Time) error
+	CreatePasswordResetToken(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt, now time.Time) error
+	GetPasswordResetToken(ctx context.Context, tokenHash string) (PasswordResetToken, error)
+	ConsumeResetAndSetPassword(ctx context.Context, userID uuid.UUID, tokenHash, newHash string, now time.Time) error
 }
+
+// resetTokenTTL bounds how long a password-reset link is valid.
+const resetTokenTTL = time.Hour
 
 // Config carries the secrets and TTLs the Service needs.
 type Config struct {
@@ -30,20 +36,25 @@ type Config struct {
 // Service implements the account/session use cases.
 type Service struct {
 	store      accountStore
+	mailer     Mailer
 	jwtKey     []byte
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 	now        func() time.Time
 }
 
-// NewService constructs a Service. now defaults to time.Now (UTC) when nil; tests
-// inject a fixed clock.
-func NewService(store accountStore, cfg Config, now func() time.Time) *Service {
+// NewService constructs a Service. mailer defaults to a no-op when nil; now
+// defaults to time.Now (UTC) when nil. Tests inject a fixed clock and fake mailer.
+func NewService(store accountStore, cfg Config, mailer Mailer, now func() time.Time) *Service {
 	if now == nil {
 		now = func() time.Time { return time.Now().UTC() }
 	}
+	if mailer == nil {
+		mailer = noopMailer{}
+	}
 	return &Service{
 		store:      store,
+		mailer:     mailer,
 		jwtKey:     cfg.JWTKey,
 		accessTTL:  cfg.AccessTTL,
 		refreshTTL: cfg.RefreshTTL,
