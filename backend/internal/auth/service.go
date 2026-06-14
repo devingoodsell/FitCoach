@@ -21,6 +21,8 @@ type accountStore interface {
 	CreatePasswordResetToken(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt, now time.Time) error
 	GetPasswordResetToken(ctx context.Context, tokenHash string) (PasswordResetToken, error)
 	ConsumeResetAndSetPassword(ctx context.Context, userID uuid.UUID, tokenHash, newHash string, now time.Time) error
+	GetUserByID(ctx context.Context, userID uuid.UUID) (User, error)
+	DeleteUser(ctx context.Context, userID uuid.UUID) error
 }
 
 // resetTokenTTL bounds how long a password-reset link is valid.

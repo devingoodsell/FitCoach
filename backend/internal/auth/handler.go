@@ -48,6 +48,11 @@ func (h *Handler) Register(r *httpx.Router) {
 	r.HandleFunc("POST /auth/reset/confirm", h.resetConfirm)
 }
 
+// RegisterAuthenticated attaches routes that require a valid access token.
+func (h *Handler) RegisterAuthenticated(r *httpx.Router, requireAuth httpx.Middleware) {
+	r.Handle("DELETE /account", requireAuth(http.HandlerFunc(h.deleteAccount)))
+}
+
 type credentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -162,6 +167,34 @@ func (h *Handler) resetConfirm(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_token", "this reset link is invalid or has expired")
 	default:
 		h.logger.Error("reset confirm failed", "error", err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "something went wrong")
+	}
+}
+
+type deleteAccountBody struct {
+	Password string `json:"password"`
+}
+
+func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
+	userID, ok := UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "authentication required")
+		return
+	}
+	var req deleteAccountBody
+	if err := httpx.DecodeJSON(r, &req); err != nil || req.Password == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "password confirmation is required")
+		return
+	}
+
+	err := h.svc.DeleteAccount(r.Context(), userID, req.Password)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	case errors.Is(err, ErrInvalidCredentials):
+		httpx.WriteError(w, http.StatusUnauthorized, "invalid_credentials", "password confirmation failed")
+	default:
+		h.logger.Error("account deletion failed", "error", err.Error())
 		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "something went wrong")
 	}
 }

@@ -73,6 +73,7 @@ func run(args []string) error {
 	router.Use(logging.Middleware(logger))
 	router.HandleFunc("GET /healthz", httpx.Health())
 	authHandler.Register(router)
+	authHandler.RegisterAuthenticated(router, requireAuth)
 	consentHandler.Register(router, requireAuth)
 
 	return serve(cfg, logger, router)

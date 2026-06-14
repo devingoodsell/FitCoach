@@ -101,6 +101,33 @@ func (s *Store) GetUserByEmail(ctx context.Context, email string) (User, error) 
 	return u, nil
 }
 
+// GetUserByID looks up an account by id.
+func (s *Store) GetUserByID(ctx context.Context, userID uuid.UUID) (User, error) {
+	var u User
+	err := s.db.QueryRowContext(ctx,
+		`SELECT email, password_hash, email_verified, created_at, updated_at
+		 FROM users WHERE id = ?`, userID[:]).
+		Scan(&u.Email, &u.PasswordHash, &u.EmailVerified, &u.CreatedAt, &u.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return User{}, fmt.Errorf("query user by id: %w", err)
+	}
+	u.ID = userID
+	return u, nil
+}
+
+// DeleteUser removes the account row. Every user-owned table declares ON DELETE
+// CASCADE, so this also removes sessions, reset tokens, consents, and Coach
+// Memory. Idempotent: deleting an absent user is a no-op.
+func (s *Store) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, userID[:]); err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	return nil
+}
+
 // CreateRefreshToken persists a session for the user.
 func (s *Store) CreateRefreshToken(ctx context.Context, userID uuid.UUID, tokenHash, deviceLabel string, expiresAt, now time.Time) error {
 	id, err := uuid.NewV7()

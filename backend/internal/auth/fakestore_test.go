@@ -116,6 +116,27 @@ func (f *fakeStore) ConsumeResetAndSetPassword(_ context.Context, userID uuid.UU
 	return nil
 }
 
+func (f *fakeStore) GetUserByID(_ context.Context, userID uuid.UUID) (User, error) {
+	u, ok := f.usersByID[userID]
+	if !ok {
+		return User{}, ErrUserNotFound
+	}
+	return u, nil
+}
+
+func (f *fakeStore) DeleteUser(_ context.Context, userID uuid.UUID) error {
+	if u, ok := f.usersByID[userID]; ok {
+		delete(f.usersByID, userID)
+		delete(f.usersByEmail, u.Email)
+		for k, rt := range f.tokens {
+			if rt.UserID == userID {
+				delete(f.tokens, k) // mimic ON DELETE CASCADE
+			}
+		}
+	}
+	return nil
+}
+
 // fakeMailer records the last password-reset delivery for assertions.
 type fakeMailer struct {
 	lastEmail string
