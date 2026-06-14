@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// Logger is the logger type used throughout the backend. It aliases
+// *slog.Logger so callers depend on this package rather than log/slog directly.
+type Logger = slog.Logger
+
 // New returns a JSON slog.Logger at the given level ("debug","info","warn",
 // "error"; unknown values fall back to info). A ReplaceAttr hook redacts any
 // attribute whose key looks sensitive, as a backstop to typed redaction.
