@@ -29,6 +29,8 @@ import pro.d11l.fitcoach.feature.auth.AuthScreen
 import pro.d11l.fitcoach.feature.auth.AuthViewModel
 import pro.d11l.fitcoach.feature.consent.ConsentScreen
 import pro.d11l.fitcoach.feature.consent.ConsentViewModel
+import pro.d11l.fitcoach.feature.onboarding.OnboardingScreen
+import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsScreen
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
@@ -49,7 +51,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Step { Auth, Consent, Home, Settings }
+private enum class Step { Auth, Consent, Onboarding, Home, Settings }
 
 @Composable
 private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
@@ -68,7 +70,11 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
         }
         Step.Consent -> {
             val vm: ConsentViewModel = viewModel(key = "consent-$epoch", factory = factory)
-            ConsentScreen(vm) { step = Step.Home }
+            ConsentScreen(vm) { step = Step.Onboarding }
+        }
+        Step.Onboarding -> {
+            val vm: OnboardingViewModel = viewModel(key = "onboarding-$epoch", factory = factory)
+            OnboardingScreen(vm) { step = Step.Home }
         }
         Step.Home -> HomeScreen(onOpenSettings = { step = Step.Settings })
         Step.Settings -> {

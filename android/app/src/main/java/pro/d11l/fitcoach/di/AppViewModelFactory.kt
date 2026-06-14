@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import pro.d11l.fitcoach.feature.auth.AuthViewModel
 import pro.d11l.fitcoach.feature.consent.ConsentViewModel
+import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
 /** Constructs ViewModels with their dependencies from the [AppContainer]. */
@@ -14,6 +15,8 @@ class AppViewModelFactory(private val container: AppContainer) : ViewModelProvid
             AuthViewModel(container.authRepository) as T
         modelClass.isAssignableFrom(ConsentViewModel::class.java) ->
             ConsentViewModel(container.authRepository) as T
+        modelClass.isAssignableFrom(OnboardingViewModel::class.java) ->
+            OnboardingViewModel(container.onboardingRepository) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
             SettingsViewModel(container.authRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")

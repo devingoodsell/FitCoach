@@ -48,4 +48,19 @@ interface FitCoachApi {
     // DELETE with a body: HTTP annotation allows it where @DELETE does not.
     @HTTP(method = "DELETE", path = "account", hasBody = true)
     suspend fun deleteAccount(@Body body: DeleteAccountRequest): Response<Unit>
+
+    @PUT("onboarding/profile")
+    suspend fun saveProfile(@Body body: ProfileDto): Response<ProfileDto>
+
+    @PUT("onboarding/goals")
+    suspend fun saveGoals(@Body body: GoalWeightsDto): Response<GoalWeightsDto>
+
+    @PUT("onboarding/schedule")
+    suspend fun saveSchedule(@Body body: ScheduleDto): Response<ScheduleDto>
+
+    @PUT("onboarding/diet")
+    suspend fun saveDiet(@Body body: DietPrefsDto): Response<DietPrefsDto>
+
+    @PUT("onboarding/preferences")
+    suspend fun savePreferences(@Body body: PreferencesDto): Response<PreferencesDto>
 }

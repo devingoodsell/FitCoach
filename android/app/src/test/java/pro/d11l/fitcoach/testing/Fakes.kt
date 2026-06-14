@@ -9,7 +9,12 @@ import pro.d11l.fitcoach.core.network.ConsentRecord
 import pro.d11l.fitcoach.core.network.ConsentRequest
 import pro.d11l.fitcoach.core.network.Credentials
 import pro.d11l.fitcoach.core.network.DeleteAccountRequest
+import pro.d11l.fitcoach.core.network.DietPrefsDto
 import pro.d11l.fitcoach.core.network.FitCoachApi
+import pro.d11l.fitcoach.core.network.GoalWeightsDto
+import pro.d11l.fitcoach.core.network.PreferencesDto
+import pro.d11l.fitcoach.core.network.ProfileDto
+import pro.d11l.fitcoach.core.network.ScheduleDto
 import pro.d11l.fitcoach.core.network.MemorySection
 import pro.d11l.fitcoach.core.network.MemorySections
 import pro.d11l.fitcoach.core.network.PutSectionRequest
@@ -60,6 +65,14 @@ class FakeApi : FitCoachApi {
     var logoutCalled = false
     var lastConsent: ConsentRequest? = null
 
+    // onboarding: default to echoing the request back as success
+    var profileResponse: Response<ProfileDto>? = null
+    var lastProfile: ProfileDto? = null
+    var lastGoals: GoalWeightsDto? = null
+    var lastSchedule: ScheduleDto? = null
+    var lastDiet: DietPrefsDto? = null
+    var lastPreferences: PreferencesDto? = null
+
     override suspend fun signup(body: Credentials): Response<TokenPair> =
         signupResponse ?: Response.success(tokenPair)
 
@@ -88,8 +101,40 @@ class FakeApi : FitCoachApi {
         Response.success(MemorySection(section, 1, kotlinx.serialization.json.JsonObject(emptyMap())))
 
     override suspend fun deleteAccount(body: DeleteAccountRequest): Response<Unit> = deleteResponse
+
+    override suspend fun saveProfile(body: ProfileDto): Response<ProfileDto> {
+        lastProfile = body
+        return profileResponse ?: Response.success(body)
+    }
+
+    override suspend fun saveGoals(body: GoalWeightsDto): Response<GoalWeightsDto> {
+        lastGoals = body
+        return Response.success(body)
+    }
+
+    override suspend fun saveSchedule(body: ScheduleDto): Response<ScheduleDto> {
+        lastSchedule = body
+        return Response.success(body)
+    }
+
+    override suspend fun saveDiet(body: DietPrefsDto): Response<DietPrefsDto> {
+        lastDiet = body
+        return Response.success(body)
+    }
+
+    override suspend fun savePreferences(body: PreferencesDto): Response<PreferencesDto> {
+        lastPreferences = body
+        return Response.success(body)
+    }
 }
 
 /** Builds a Retrofit-style error response with the given status code. */
 fun <T> errorResponse(code: Int): Response<T> =
     Response.error(code, "{}".toResponseBody("application/json".toMediaTypeOrNull()))
+
+/** Builds a 400 validation error with a fields map, as the backend returns. */
+fun <T> validationErrorResponse(fields: Map<String, String>): Response<T> {
+    val entries = fields.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }
+    val body = "{\"error\":\"validation_failed\",\"message\":\"invalid\",\"fields\":{$entries}}"
+    return Response.error(400, body.toResponseBody("application/json".toMediaTypeOrNull()))
+}

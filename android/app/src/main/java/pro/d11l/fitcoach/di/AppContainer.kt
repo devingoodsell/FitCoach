@@ -7,6 +7,7 @@ import pro.d11l.fitcoach.core.db.FitCoachDatabase
 import pro.d11l.fitcoach.core.network.NetworkModule
 import pro.d11l.fitcoach.data.AuthRepository
 import pro.d11l.fitcoach.data.MemoryRepository
+import pro.d11l.fitcoach.data.OnboardingRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
 
 /**
@@ -21,4 +22,5 @@ class AppContainer(context: Context) {
 
     val authRepository = AuthRepository(api, tokenStorage, memoryCache)
     val memoryRepository = MemoryRepository(api, memoryCache)
+    val onboardingRepository = OnboardingRepository(api)
 }

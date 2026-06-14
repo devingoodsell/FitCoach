@@ -55,3 +55,64 @@ data class PutSectionRequest(val data: JsonElement)
 
 @Serializable
 data class ApiError(val error: String, val message: String? = null)
+
+/** Onboarding DTOs (mirror the onboarding endpoints in the contract). */
+
+@Serializable
+data class BenchmarkLiftDto(
+    val name: String,
+    @SerialName("one_rep_max_kg") val oneRepMaxKg: Double,
+)
+
+@Serializable
+data class ExperienceDto(
+    @SerialName("training_age_years") val trainingAgeYears: Double? = null,
+    val level: String,
+    @SerialName("benchmark_lifts") val benchmarkLifts: List<BenchmarkLiftDto> = emptyList(),
+)
+
+@Serializable
+data class ProfileDto(
+    val dob: String? = null,
+    val age: Int? = null,
+    val sex: String,
+    @SerialName("height_cm") val heightCm: Double? = null,
+    @SerialName("weight_kg") val weightKg: Double? = null,
+    val experience: ExperienceDto,
+)
+
+@Serializable
+data class GoalWeightsDto(
+    val strength: Double,
+    val healthspan: Double,
+    @SerialName("body_composition") val bodyComposition: Double,
+    val performance: Double,
+)
+
+@Serializable
+data class ScheduleDto(
+    @SerialName("days_per_week") val daysPerWeek: Int,
+    @SerialName("session_length_min") val sessionLengthMin: Int,
+    @SerialName("preferred_days") val preferredDays: List<String> = emptyList(),
+)
+
+@Serializable
+data class DietPrefsDto(
+    val pattern: String,
+    val supplements: String = "",
+    val medications: String = "",
+)
+
+@Serializable
+data class PreferencesDto(
+    val likes: List<String> = emptyList(),
+    val dislikes: List<String> = emptyList(),
+    @SerialName("hard_avoids") val hardAvoids: List<String> = emptyList(),
+)
+
+@Serializable
+data class ValidationErrorDto(
+    val error: String,
+    val message: String? = null,
+    val fields: Map<String, String> = emptyMap(),
+)
