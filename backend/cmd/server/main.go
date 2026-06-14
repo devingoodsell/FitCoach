@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"pro.d11l.fitcoach/backend/internal/auth"
+	"pro.d11l.fitcoach/backend/internal/consent"
 	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/db"
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
@@ -65,11 +66,14 @@ func run(args []string) error {
 		RefreshTTL: cfg.RefreshTokenTTL,
 	}, auth.NewLogMailer(logger), nil)
 	authHandler := auth.NewHandler(authSvc, logger)
+	requireAuth := auth.RequireAuth(authSvc)
+	consentHandler := consent.NewHandler(consent.NewStore(database), logger, nil)
 
 	router := httpx.NewRouter()
 	router.Use(logging.Middleware(logger))
 	router.HandleFunc("GET /healthz", httpx.Health())
 	authHandler.Register(router)
+	consentHandler.Register(router, requireAuth)
 
 	return serve(cfg, logger, router)
 }

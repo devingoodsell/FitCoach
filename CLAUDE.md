@@ -76,6 +76,7 @@ FitCoach/
 │   │   │   ├── httpx/           router, middleware, error/JSON helpers
 │   │   │   └── logging/         structured logging (redacts secrets & PII)
 │   │   ├── auth/              accounts, sessions, password reset, deletion      (E1)
+│   │   ├── consent/           health-data / disclaimer consent capture          (E1)
 │   │   ├── memory/            Coach Memory store + prompt assembly              (E3)
 │   │   ├── onboarding/        user-model capture/validation                    (E2)
 │   │   ├── readiness/         readiness compute from raw signals               (E4)
