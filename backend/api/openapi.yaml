@@ -18,6 +18,7 @@ tags:
   - name: consent
   - name: account
   - name: memory
+  - name: onboarding
 
 paths:
   /healthz:
@@ -338,6 +339,113 @@ paths:
         "400":
           description: Malformed payload
 
+  /onboarding/profile:
+    put:
+      tags: [onboarding]
+      summary: Save profile & physiology (E2-S2/S3/S8)
+      description: >
+        Validates and persists the profile section: DOB (preferred) or age, sex,
+        optional height/weight, experience, and aging emphases. Weight is appended
+        to a timestamped history; aging emphases default from age when omitted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Profile" }
+      responses:
+        "200":
+          description: Stored profile (with derived history/defaults)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
+
+  /onboarding/goals:
+    put:
+      tags: [onboarding]
+      summary: Save goal weighting (E2-S4)
+      description: Goal weights stored as a distribution normalized to sum 1.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GoalWeights" }
+      responses:
+        "200":
+          description: Stored (normalized) goal weights
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalWeights" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
+
+  /onboarding/schedule:
+    put:
+      tags: [onboarding]
+      summary: Save training schedule (E2-S5)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Schedule" }
+      responses:
+        "200":
+          description: Stored schedule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Schedule" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
+
+  /onboarding/diet:
+    put:
+      tags: [onboarding]
+      summary: Save dietary preferences (E2-S7)
+      description: Dietary pattern + free-text supplements/medications, read by E11.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DietPrefs" }
+      responses:
+        "200":
+          description: Stored dietary preferences
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DietPrefs" }
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
+
+  /onboarding/preferences:
+    put:
+      tags: [onboarding]
+      summary: Save exercise/equipment preferences (E2-S6)
+      description: Likes, dislikes, and hard-avoids (hard-avoids are planning constraints).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Preferences" }
+      responses:
+        "200":
+          description: Stored preferences
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Preferences" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -444,6 +552,87 @@ components:
         schema_version: { type: integer }
         performed_at: { type: string, format: date-time }
         data: { type: object }
+
+    Profile:
+      type: object
+      required: [sex, experience]
+      properties:
+        dob: { type: string, format: date, description: "YYYY-MM-DD (preferred over age)" }
+        age: { type: integer, minimum: 13, maximum: 120 }
+        sex: { type: string, enum: [male, female, other] }
+        height_cm: { type: number }
+        weight_kg: { type: number, description: Appended to a timestamped history server-side }
+        weight_history:
+          type: array
+          readOnly: true
+          items:
+            type: object
+            properties:
+              kg: { type: number }
+              recorded_at: { type: string, format: date-time }
+        experience:
+          type: object
+          required: [level]
+          properties:
+            training_age_years: { type: number }
+            level: { type: string, enum: [novice, intermediate, advanced] }
+            benchmark_lifts:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  one_rep_max_kg: { type: number }
+        aging_emphases:
+          type: object
+          description: Defaults from age when omitted; adjustable.
+          properties:
+            bone_balance: { type: number }
+            joint_tendon: { type: number }
+            vo2max: { type: number }
+            cardio_base: { type: number }
+
+    GoalWeights:
+      type: object
+      properties:
+        strength: { type: number, minimum: 0 }
+        healthspan: { type: number, minimum: 0 }
+        body_composition: { type: number, minimum: 0 }
+        performance: { type: number, minimum: 0 }
+
+    Schedule:
+      type: object
+      required: [days_per_week, session_length_min]
+      properties:
+        days_per_week: { type: integer, minimum: 1, maximum: 7 }
+        session_length_min: { type: integer, minimum: 10, maximum: 240 }
+        preferred_days: { type: array, items: { type: string } }
+        preferred_times: { type: array, items: { type: string } }
+
+    DietPrefs:
+      type: object
+      required: [pattern]
+      properties:
+        pattern: { type: string, enum: [omnivore, vegan, vegetarian, pescatarian, kosher, halal] }
+        supplements: { type: string }
+        medications: { type: string }
+
+    Preferences:
+      type: object
+      properties:
+        likes: { type: array, items: { type: string } }
+        dislikes: { type: array, items: { type: string } }
+        hard_avoids: { type: array, items: { type: string }, description: Treated as planning constraints }
+
+    ValidationError:
+      type: object
+      properties:
+        error: { type: string, example: validation_failed }
+        message: { type: string }
+        fields:
+          type: object
+          additionalProperties: { type: string }
+          description: Per-field error messages
 
     Error:
       type: object
