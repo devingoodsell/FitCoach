@@ -14,6 +14,7 @@ import (
 
 	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
+	"pro.d11l.fitcoach/backend/internal/platform/logging"
 )
 
 func main() {
@@ -28,7 +29,10 @@ func run() error {
 		return err
 	}
 
+	logger := logging.New(os.Stdout, cfg.LogLevel)
+
 	router := httpx.NewRouter()
+	router.Use(logging.Middleware(logger))
 	router.HandleFunc("GET /healthz", httpx.Health())
 
 	srv := &http.Server{
@@ -40,7 +44,7 @@ func run() error {
 	// Start serving in the background so we can wait for a shutdown signal.
 	serveErr := make(chan error, 1)
 	go func() {
-		log.Printf("listening on %s", cfg.HTTPAddr)
+		logger.Info("server listening", "addr", cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serveErr <- err
 		}
@@ -53,7 +57,7 @@ func run() error {
 	case err := <-serveErr:
 		return err
 	case <-ctx.Done():
-		log.Print("shutdown signal received")
+		logger.Info("shutdown signal received")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
