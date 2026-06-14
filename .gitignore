@@ -1,0 +1,42 @@
+# ─── Secrets (NEVER commit) ────────────────────────────────────────────────
+# The Claude / Anthropic API key lives ONLY in backend runtime config.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+backend/config/local.*
+
+# ─── Go (backend) ──────────────────────────────────────────────────────────
+/backend/bin/
+/backend/dist/
+*.test
+*.out
+coverage.out
+go.work
+go.work.sum
+
+# ─── Android / Gradle / Kotlin ─────────────────────────────────────────────
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/captures/
+/android/.cxx/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+google-services.json
+
+# ─── IDEs / editors ────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+
+# ─── Misc ──────────────────────────────────────────────────────────────────
+*.log
+tmp/
