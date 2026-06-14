@@ -35,6 +35,27 @@ paths:
                 properties:
                   status: { type: string, example: ok }
 
+  /disclaimers:
+    get:
+      tags: [health]
+      summary: Fetch centrally-managed disclaimer copy (E13-S1)
+      security: []
+      description: >
+        Single source of truth for medical and health-data disclaimer text. The
+        version matches the consent version recorded at /consent. Public so it can
+        be shown at onboarding and the consent step before a session exists.
+      responses:
+        "200":
+          description: Current disclaimer document
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string, example: v1 }
+                  medical: { type: string }
+                  health_data: { type: string }
+
   /auth/signup:
     post:
       tags: [auth]

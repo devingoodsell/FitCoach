@@ -19,6 +19,7 @@ import (
 
 	"pro.d11l.fitcoach/backend/internal/auth"
 	"pro.d11l.fitcoach/backend/internal/consent"
+	"pro.d11l.fitcoach/backend/internal/disclaimer"
 	"pro.d11l.fitcoach/backend/internal/memory"
 	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/db"
@@ -74,6 +75,7 @@ func run(args []string) error {
 	router := httpx.NewRouter()
 	router.Use(logging.Middleware(logger))
 	router.HandleFunc("GET /healthz", httpx.Health())
+	disclaimer.NewHandler().Register(router)
 	authHandler.Register(router)
 	authHandler.RegisterAuthenticated(router, requireAuth)
 	consentHandler.Register(router, requireAuth)
