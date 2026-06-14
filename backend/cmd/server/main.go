@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
 )
 
@@ -22,16 +23,16 @@ func main() {
 }
 
 func run() error {
-	addr := os.Getenv("HTTP_ADDR")
-	if addr == "" {
-		addr = ":8080"
+	cfg, err := config.Load()
+	if err != nil {
+		return err
 	}
 
 	router := httpx.NewRouter()
 	router.HandleFunc("GET /healthz", httpx.Health())
 
 	srv := &http.Server{
-		Addr:              addr,
+		Addr:              cfg.HTTPAddr,
 		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -39,7 +40,7 @@ func run() error {
 	// Start serving in the background so we can wait for a shutdown signal.
 	serveErr := make(chan error, 1)
 	go func() {
-		log.Printf("listening on %s", addr)
+		log.Printf("listening on %s", cfg.HTTPAddr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serveErr <- err
 		}
