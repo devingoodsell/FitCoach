@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"pro.d11l.fitcoach/backend/internal/auth"
 	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/db"
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
@@ -58,13 +59,22 @@ func run(args []string) error {
 		return err
 	}
 
-	return serve(cfg, logger)
-}
+	authSvc := auth.NewService(auth.NewStore(database), auth.Config{
+		JWTKey:     []byte(cfg.JWTSigningKey.Reveal()),
+		AccessTTL:  cfg.AccessTokenTTL,
+		RefreshTTL: cfg.RefreshTokenTTL,
+	}, nil)
+	authHandler := auth.NewHandler(authSvc, logger)
 
-func serve(cfg config.Config, logger *logging.Logger) error {
 	router := httpx.NewRouter()
 	router.Use(logging.Middleware(logger))
 	router.HandleFunc("GET /healthz", httpx.Health())
+	authHandler.Register(router)
+
+	return serve(cfg, logger, router)
+}
+
+func serve(cfg config.Config, logger *logging.Logger, router http.Handler) error {
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
