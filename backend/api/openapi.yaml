@@ -17,6 +17,7 @@ tags:
   - name: auth
   - name: consent
   - name: account
+  - name: memory
 
 paths:
   /healthz:
@@ -214,6 +215,108 @@ paths:
         "401":
           description: Confirmation failed
 
+  /memory:
+    get:
+      tags: [memory]
+      summary: Read all Coach Memory sections (E3-S1)
+      description: >
+        Returns every stored singleton section for the caller, each upgraded to
+        the current schema version on read.
+      responses:
+        "200":
+          description: All sections
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemorySections" }
+
+  /memory/{section}:
+    parameters:
+      - name: section
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [profile, goals, schedule, preferences, locations, injuries, diet]
+    get:
+      tags: [memory]
+      summary: Read one Coach Memory section (E3-S1)
+      responses:
+        "200":
+          description: The section
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemorySection" }
+        "404":
+          description: Section not yet set
+        "400":
+          description: Unknown section name
+    put:
+      tags: [memory]
+      summary: Create or replace a Coach Memory section (E3-S1)
+      description: >
+        Upserts the section's JSON document at the current schema version. The
+        document shape is owned by the domain epics (E2/E7/E9/E11); the contract
+        treats data as an opaque object here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Section payload (shape owned by the domain epic)
+              required: [data]
+      responses:
+        "200":
+          description: Section stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemorySection" }
+        "400":
+          description: Unknown section or malformed data
+
+  /workouts:
+    get:
+      tags: [memory]
+      summary: List recent recorded sessions (E3-S3)
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 30, maximum: 200 }
+      responses:
+        "200":
+          description: Recent workout logs (most recent first)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workouts:
+                    type: array
+                    items: { $ref: "#/components/schemas/WorkoutLog" }
+    post:
+      tags: [memory]
+      summary: Record a completed session (E3-S3)
+      description: >
+        Idempotent on client_session_id: re-posting the same session (e.g. an
+        offline client re-syncing) updates rather than duplicates it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkoutLogInput" }
+      responses:
+        "200":
+          description: Session recorded (or re-confirmed)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkoutLog" }
+        "400":
+          description: Malformed payload
+
 components:
   securitySchemes:
     bearerAuth:
@@ -286,6 +389,40 @@ components:
       required: [password]
       properties:
         password: { type: string, description: Re-auth confirmation }
+
+    MemorySection:
+      type: object
+      properties:
+        section:
+          type: string
+          enum: [profile, goals, schedule, preferences, locations, injuries, diet]
+        schema_version: { type: integer, description: Schema version after read-time upgrade }
+        data: { type: object, description: Section payload (shape owned by the domain epic) }
+        updated_at: { type: string, format: date-time }
+
+    MemorySections:
+      type: object
+      properties:
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/MemorySection" }
+
+    WorkoutLogInput:
+      type: object
+      required: [client_session_id, performed_at, data]
+      properties:
+        client_session_id: { type: string, maxLength: 64, description: Idempotency key }
+        performed_at: { type: string, format: date-time }
+        data: { type: object, description: Logged session (exercises, reps, weight, rests, autoreg events) }
+
+    WorkoutLog:
+      type: object
+      properties:
+        id: { type: string }
+        client_session_id: { type: string }
+        schema_version: { type: integer }
+        performed_at: { type: string, format: date-time }
+        data: { type: object }
 
     Error:
       type: object
