@@ -91,6 +91,37 @@ func TestIntegrationSectionRoundTripAndIsolation(t *testing.T) {
 	}
 }
 
+func TestIntegrationWorkoutIdempotency(t *testing.T) {
+	database := requireDB(t)
+	defer database.Close()
+	store := memory.NewStore(database, memory.NewUpgrader(), nil)
+	ctx := context.Background()
+
+	uid := makeUser(t, database, "dave-"+uuid.NewString()+"@example.com")
+	t.Cleanup(func() { _, _ = database.Exec(`DELETE FROM users WHERE id = ?`, uid[:]) })
+
+	performed := time.Now().UTC().Truncate(time.Second)
+	first, err := store.RecordWorkout(ctx, uid, "sess-abc", json.RawMessage(`{"sets":5}`), performed)
+	if err != nil {
+		t.Fatalf("record: %v", err)
+	}
+	// Re-record the same client_session_id with updated data.
+	second, err := store.RecordWorkout(ctx, uid, "sess-abc", json.RawMessage(`{"sets":6}`), performed)
+	if err != nil {
+		t.Fatalf("re-record: %v", err)
+	}
+	if first.ID != second.ID {
+		t.Errorf("idempotency broken: %s != %s", first.ID, second.ID)
+	}
+	logs, err := store.RecentWorkouts(ctx, uid, 10)
+	if err != nil {
+		t.Fatalf("recent: %v", err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("expected 1 workout after re-record, got %d", len(logs))
+	}
+}
+
 func TestIntegrationCascadeDeleteRemovesMemory(t *testing.T) {
 	database := requireDB(t)
 	defer database.Close()
