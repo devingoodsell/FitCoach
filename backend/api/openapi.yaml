@@ -19,6 +19,7 @@ tags:
   - name: account
   - name: memory
   - name: onboarding
+  - name: locations
 
 paths:
   /healthz:
@@ -446,6 +447,86 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Preferences" }
 
+  /locations:
+    get:
+      tags: [locations]
+      summary: List locations and current context (E9-S1)
+      responses:
+        "200":
+          description: Locations document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LocationsDoc" }
+    post:
+      tags: [locations]
+      summary: Add a location (E9-S1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocationInput" }
+      responses:
+        "201":
+          description: Created location (server-assigned id)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Location" }
+        "400": { description: Name required }
+
+  /locations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [locations]
+      summary: Update a location (E9-S1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocationInput" }
+      responses:
+        "200":
+          description: Updated location
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Location" }
+        "404": { description: Not found }
+    delete:
+      tags: [locations]
+      summary: Delete a location (E9-S1)
+      description: Clears the current context if it pointed at this location.
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /locations/current:
+    put:
+      tags: [locations]
+      summary: Switch current training context (E9-S2)
+      description: >
+        Sets the active location whose equipment constrains generation. The change
+        is timestamped and acts as a re-planning trigger (E5-S5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location_id]
+              properties:
+                location_id: { type: string }
+                note: { type: string, example: "traveling this week, hotel gym only" }
+      responses:
+        "200":
+          description: Current context set
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurrentContext" }
+        "404": { description: Location not found }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -623,6 +704,35 @@ components:
         likes: { type: array, items: { type: string } }
         dislikes: { type: array, items: { type: string } }
         hard_avoids: { type: array, items: { type: string }, description: Treated as planning constraints }
+
+    Location:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        equipment: { type: array, items: { type: string } }
+
+    LocationInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        equipment: { type: array, items: { type: string } }
+
+    CurrentContext:
+      type: object
+      properties:
+        location_id: { type: string }
+        note: { type: string }
+        changed_at: { type: string, format: date-time }
+
+    LocationsDoc:
+      type: object
+      properties:
+        locations:
+          type: array
+          items: { $ref: "#/components/schemas/Location" }
+        current_context: { $ref: "#/components/schemas/CurrentContext" }
 
     ValidationError:
       type: object
