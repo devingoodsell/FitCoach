@@ -175,3 +175,12 @@ data class PostWorkoutNoteDto(
     val note: String = "",
     val disclaimer: String = "",
 )
+
+/** Readiness DTO (mirrors GET /readiness in the contract). */
+@Serializable
+data class ReadinessDto(
+    val value: Int = 50,
+    val confidence: String = "low",
+    val drivers: List<String> = emptyList(),
+    val explanation: String = "",
+)

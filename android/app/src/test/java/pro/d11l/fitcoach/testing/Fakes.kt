@@ -20,6 +20,7 @@ import pro.d11l.fitcoach.core.network.LocationsDocDto
 import pro.d11l.fitcoach.core.network.PostWorkoutNoteDto
 import pro.d11l.fitcoach.core.network.PreferencesDto
 import pro.d11l.fitcoach.core.network.ProfileDto
+import pro.d11l.fitcoach.core.network.ReadinessDto
 import pro.d11l.fitcoach.core.network.ScheduleDto
 import pro.d11l.fitcoach.core.network.SetCurrentContextDto
 import pro.d11l.fitcoach.core.network.MemorySection
@@ -89,6 +90,10 @@ class FakeApi : FitCoachApi {
     var dietTargets = DietTargetsDto()
     var postWorkoutNote = PostWorkoutNoteDto(note = "default note", disclaimer = "d")
     var dietError = false
+
+    // readiness
+    var readiness = ReadinessDto()
+    var readinessError = false
 
     override suspend fun signup(body: Credentials): Response<TokenPair> =
         signupResponse ?: Response.success(tokenPair)
@@ -176,6 +181,9 @@ class FakeApi : FitCoachApi {
 
     override suspend fun getPostWorkoutNote(intensity: String): Response<PostWorkoutNoteDto> =
         Response.success(postWorkoutNote.copy(note = "$intensity: ${postWorkoutNote.note}"))
+
+    override suspend fun getReadiness(): Response<ReadinessDto> =
+        if (readinessError) errorResponse(500) else Response.success(readiness)
 }
 
 /** Builds a Retrofit-style error response with the given status code. */

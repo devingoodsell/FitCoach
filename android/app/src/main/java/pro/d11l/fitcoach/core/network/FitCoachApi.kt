@@ -85,4 +85,7 @@ interface FitCoachApi {
 
     @GET("diet/post-workout-note")
     suspend fun getPostWorkoutNote(@Query("intensity") intensity: String): Response<PostWorkoutNoteDto>
+
+    @GET("readiness")
+    suspend fun getReadiness(): Response<ReadinessDto>
 }

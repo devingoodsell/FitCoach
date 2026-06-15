@@ -35,6 +35,8 @@ import pro.d11l.fitcoach.feature.location.LocationScreen
 import pro.d11l.fitcoach.feature.location.LocationViewModel
 import pro.d11l.fitcoach.feature.onboarding.OnboardingScreen
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
+import pro.d11l.fitcoach.feature.readiness.ReadinessScreen
+import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsScreen
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
@@ -55,7 +57,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Step { Auth, Consent, Onboarding, Home, Locations, Diet, Settings }
+private enum class Step { Auth, Consent, Onboarding, Home, Locations, Diet, Readiness, Settings }
 
 @Composable
 private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
@@ -84,6 +86,7 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
             onOpenSettings = { step = Step.Settings },
             onOpenLocations = { step = Step.Locations },
             onOpenDiet = { step = Step.Diet },
+            onOpenReadiness = { step = Step.Readiness },
         )
         Step.Locations -> {
             val vm: LocationViewModel = viewModel(key = "locations-$epoch", factory = factory)
@@ -92,6 +95,10 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
         Step.Diet -> {
             val vm: DietViewModel = viewModel(key = "diet-$epoch", factory = factory)
             DietScreen(vm) { step = Step.Home }
+        }
+        Step.Readiness -> {
+            val vm: ReadinessViewModel = viewModel(key = "readiness-$epoch", factory = factory)
+            ReadinessScreen(vm) { step = Step.Home }
         }
         Step.Settings -> {
             val vm: SettingsViewModel = viewModel(key = "settings-$epoch", factory = factory)
@@ -108,6 +115,7 @@ private fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenLocations: () -> Unit,
     onOpenDiet: () -> Unit,
+    onOpenReadiness: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -118,6 +126,7 @@ private fun HomeScreen(
             "You're signed in. Your first generated workout arrives in a later milestone.",
             style = MaterialTheme.typography.bodyMedium,
         )
+        Button(onClick = onOpenReadiness, modifier = Modifier.fillMaxWidth()) { Text("Readiness") }
         Button(onClick = onOpenLocations, modifier = Modifier.fillMaxWidth()) { Text("Locations") }
         Button(onClick = onOpenDiet, modifier = Modifier.fillMaxWidth()) { Text("Nutrition") }
         Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) { Text("Settings") }

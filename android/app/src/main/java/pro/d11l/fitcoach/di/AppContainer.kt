@@ -10,6 +10,7 @@ import pro.d11l.fitcoach.data.DietRepository
 import pro.d11l.fitcoach.data.LocationRepository
 import pro.d11l.fitcoach.data.MemoryRepository
 import pro.d11l.fitcoach.data.OnboardingRepository
+import pro.d11l.fitcoach.data.ReadinessRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
 
 /**
@@ -27,4 +28,5 @@ class AppContainer(context: Context) {
     val onboardingRepository = OnboardingRepository(api)
     val locationRepository = LocationRepository(api)
     val dietRepository = DietRepository(api)
+    val readinessRepository = ReadinessRepository(api)
 }
