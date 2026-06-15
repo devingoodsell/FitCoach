@@ -116,3 +116,62 @@ data class ValidationErrorDto(
     val message: String? = null,
     val fields: Map<String, String> = emptyMap(),
 )
+
+/** Locations DTOs (mirror the locations endpoints in the contract). */
+
+@Serializable
+data class LocationDto(
+    val id: String = "",
+    val name: String,
+    val equipment: List<String> = emptyList(),
+)
+
+@Serializable
+data class LocationInputDto(
+    val name: String,
+    val equipment: List<String> = emptyList(),
+)
+
+@Serializable
+data class CurrentContextDto(
+    @SerialName("location_id") val locationId: String,
+    val note: String = "",
+    @SerialName("changed_at") val changedAt: String? = null,
+)
+
+@Serializable
+data class LocationsDocDto(
+    val locations: List<LocationDto> = emptyList(),
+    @SerialName("current_context") val currentContext: CurrentContextDto? = null,
+)
+
+@Serializable
+data class SetCurrentContextDto(
+    @SerialName("location_id") val locationId: String,
+    val note: String = "",
+)
+
+/** Diet DTOs (mirror the diet endpoints in the contract). */
+
+@Serializable
+data class DietTargetsValuesDto(
+    @SerialName("calories_min") val caloriesMin: Int = 0,
+    @SerialName("calories_max") val caloriesMax: Int = 0,
+    @SerialName("protein_min_g") val proteinMinG: Int = 0,
+    @SerialName("protein_max_g") val proteinMaxG: Int = 0,
+    @SerialName("low_confidence") val lowConfidence: Boolean = false,
+)
+
+@Serializable
+data class DietTargetsDto(
+    val targets: DietTargetsValuesDto = DietTargetsValuesDto(),
+    val guidance: List<String> = emptyList(),
+    val pattern: String = "",
+    val disclaimer: String = "",
+)
+
+@Serializable
+data class PostWorkoutNoteDto(
+    val note: String = "",
+    val disclaimer: String = "",
+)

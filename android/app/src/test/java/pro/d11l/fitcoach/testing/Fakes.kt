@@ -9,12 +9,19 @@ import pro.d11l.fitcoach.core.network.ConsentRecord
 import pro.d11l.fitcoach.core.network.ConsentRequest
 import pro.d11l.fitcoach.core.network.Credentials
 import pro.d11l.fitcoach.core.network.DeleteAccountRequest
+import pro.d11l.fitcoach.core.network.CurrentContextDto
 import pro.d11l.fitcoach.core.network.DietPrefsDto
+import pro.d11l.fitcoach.core.network.DietTargetsDto
 import pro.d11l.fitcoach.core.network.FitCoachApi
 import pro.d11l.fitcoach.core.network.GoalWeightsDto
+import pro.d11l.fitcoach.core.network.LocationDto
+import pro.d11l.fitcoach.core.network.LocationInputDto
+import pro.d11l.fitcoach.core.network.LocationsDocDto
+import pro.d11l.fitcoach.core.network.PostWorkoutNoteDto
 import pro.d11l.fitcoach.core.network.PreferencesDto
 import pro.d11l.fitcoach.core.network.ProfileDto
 import pro.d11l.fitcoach.core.network.ScheduleDto
+import pro.d11l.fitcoach.core.network.SetCurrentContextDto
 import pro.d11l.fitcoach.core.network.MemorySection
 import pro.d11l.fitcoach.core.network.MemorySections
 import pro.d11l.fitcoach.core.network.PutSectionRequest
@@ -73,6 +80,16 @@ class FakeApi : FitCoachApi {
     var lastDiet: DietPrefsDto? = null
     var lastPreferences: PreferencesDto? = null
 
+    // locations: an in-memory doc the fake mutates so reloads reflect writes
+    var locationsDoc = LocationsDocDto()
+    var lastSetCurrent: SetCurrentContextDto? = null
+    var locationsError = false
+
+    // diet
+    var dietTargets = DietTargetsDto()
+    var postWorkoutNote = PostWorkoutNoteDto(note = "default note", disclaimer = "d")
+    var dietError = false
+
     override suspend fun signup(body: Credentials): Response<TokenPair> =
         signupResponse ?: Response.success(tokenPair)
 
@@ -126,6 +143,39 @@ class FakeApi : FitCoachApi {
         lastPreferences = body
         return Response.success(body)
     }
+
+    override suspend fun getLocations(): Response<LocationsDocDto> =
+        if (locationsError) errorResponse(500) else Response.success(locationsDoc)
+
+    override suspend fun addLocation(body: LocationInputDto): Response<LocationDto> {
+        val created = LocationDto(id = "loc-${locationsDoc.locations.size + 1}", name = body.name, equipment = body.equipment)
+        locationsDoc = locationsDoc.copy(locations = locationsDoc.locations + created)
+        return Response.success(created)
+    }
+
+    override suspend fun updateLocation(id: String, body: LocationInputDto): Response<LocationDto> {
+        val updated = LocationDto(id = id, name = body.name, equipment = body.equipment)
+        locationsDoc = locationsDoc.copy(locations = locationsDoc.locations.map { if (it.id == id) updated else it })
+        return Response.success(updated)
+    }
+
+    override suspend fun deleteLocation(id: String): Response<Unit> {
+        locationsDoc = locationsDoc.copy(locations = locationsDoc.locations.filterNot { it.id == id })
+        return Response.success(Unit)
+    }
+
+    override suspend fun setCurrentContext(body: SetCurrentContextDto): Response<CurrentContextDto> {
+        lastSetCurrent = body
+        val current = CurrentContextDto(locationId = body.locationId, note = body.note, changedAt = "2026-06-14T12:00:00Z")
+        locationsDoc = locationsDoc.copy(currentContext = current)
+        return Response.success(current)
+    }
+
+    override suspend fun getDietTargets(): Response<DietTargetsDto> =
+        if (dietError) errorResponse(500) else Response.success(dietTargets)
+
+    override suspend fun getPostWorkoutNote(intensity: String): Response<PostWorkoutNoteDto> =
+        Response.success(postWorkoutNote.copy(note = "$intensity: ${postWorkoutNote.note}"))
 }
 
 /** Builds a Retrofit-style error response with the given status code. */

@@ -29,6 +29,10 @@ import pro.d11l.fitcoach.feature.auth.AuthScreen
 import pro.d11l.fitcoach.feature.auth.AuthViewModel
 import pro.d11l.fitcoach.feature.consent.ConsentScreen
 import pro.d11l.fitcoach.feature.consent.ConsentViewModel
+import pro.d11l.fitcoach.feature.diet.DietScreen
+import pro.d11l.fitcoach.feature.diet.DietViewModel
+import pro.d11l.fitcoach.feature.location.LocationScreen
+import pro.d11l.fitcoach.feature.location.LocationViewModel
 import pro.d11l.fitcoach.feature.onboarding.OnboardingScreen
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsScreen
@@ -51,7 +55,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Step { Auth, Consent, Onboarding, Home, Settings }
+private enum class Step { Auth, Consent, Onboarding, Home, Locations, Diet, Settings }
 
 @Composable
 private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
@@ -76,7 +80,19 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
             val vm: OnboardingViewModel = viewModel(key = "onboarding-$epoch", factory = factory)
             OnboardingScreen(vm) { step = Step.Home }
         }
-        Step.Home -> HomeScreen(onOpenSettings = { step = Step.Settings })
+        Step.Home -> HomeScreen(
+            onOpenSettings = { step = Step.Settings },
+            onOpenLocations = { step = Step.Locations },
+            onOpenDiet = { step = Step.Diet },
+        )
+        Step.Locations -> {
+            val vm: LocationViewModel = viewModel(key = "locations-$epoch", factory = factory)
+            LocationScreen(vm) { step = Step.Home }
+        }
+        Step.Diet -> {
+            val vm: DietViewModel = viewModel(key = "diet-$epoch", factory = factory)
+            DietScreen(vm) { step = Step.Home }
+        }
         Step.Settings -> {
             val vm: SettingsViewModel = viewModel(key = "settings-$epoch", factory = factory)
             SettingsScreen(vm, onSignedOut = {
@@ -88,18 +104,22 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
 }
 
 @Composable
-private fun HomeScreen(onOpenSettings: () -> Unit) {
+private fun HomeScreen(
+    onOpenSettings: () -> Unit,
+    onOpenLocations: () -> Unit,
+    onOpenDiet: () -> Unit,
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("FitCoach", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "You're signed in. Onboarding and your first workout arrive in the next milestone.",
+            "You're signed in. Your first generated workout arrives in a later milestone.",
             style = MaterialTheme.typography.bodyMedium,
         )
-        Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
-            Text("Settings")
-        }
+        Button(onClick = onOpenLocations, modifier = Modifier.fillMaxWidth()) { Text("Locations") }
+        Button(onClick = onOpenDiet, modifier = Modifier.fillMaxWidth()) { Text("Nutrition") }
+        Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) { Text("Settings") }
     }
 }

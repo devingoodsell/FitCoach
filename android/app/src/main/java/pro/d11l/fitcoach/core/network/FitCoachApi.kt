@@ -8,6 +8,7 @@ import retrofit2.http.HTTP
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Typed client for OUR backend. The app never calls Anthropic directly; the
@@ -63,4 +64,25 @@ interface FitCoachApi {
 
     @PUT("onboarding/preferences")
     suspend fun savePreferences(@Body body: PreferencesDto): Response<PreferencesDto>
+
+    @GET("locations")
+    suspend fun getLocations(): Response<LocationsDocDto>
+
+    @POST("locations")
+    suspend fun addLocation(@Body body: LocationInputDto): Response<LocationDto>
+
+    @PUT("locations/{id}")
+    suspend fun updateLocation(@Path("id") id: String, @Body body: LocationInputDto): Response<LocationDto>
+
+    @DELETE("locations/{id}")
+    suspend fun deleteLocation(@Path("id") id: String): Response<Unit>
+
+    @PUT("locations/current")
+    suspend fun setCurrentContext(@Body body: SetCurrentContextDto): Response<CurrentContextDto>
+
+    @GET("diet/targets")
+    suspend fun getDietTargets(): Response<DietTargetsDto>
+
+    @GET("diet/post-workout-note")
+    suspend fun getPostWorkoutNote(@Query("intensity") intensity: String): Response<PostWorkoutNoteDto>
 }
