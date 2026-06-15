@@ -3,6 +3,7 @@ package consent
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,6 +31,21 @@ func (s *Store) Record(ctx context.Context, userID uuid.UUID, ctype, version str
 		return fmt.Errorf("insert consent: %w", err)
 	}
 	return nil
+}
+
+// HasConsent reports whether the user has ever recorded a consent of the given
+// type (used to gate health-data ingestion in E4).
+func (s *Store) HasConsent(ctx context.Context, userID uuid.UUID, ctype string) (bool, error) {
+	var one int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT 1 FROM consents WHERE user_id = ? AND type = ? LIMIT 1`, userID[:], ctype).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("query consent: %w", err)
+	}
+	return true, nil
 }
 
 // List returns the current consent state: the most recent acceptance per type.

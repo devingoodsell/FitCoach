@@ -21,6 +21,7 @@ tags:
   - name: onboarding
   - name: locations
   - name: diet
+  - name: readiness
 
 paths:
   /healthz:
@@ -563,6 +564,43 @@ paths:
                   note: { type: string }
                   disclaimer: { type: string }
 
+  /health/signals:
+    post:
+      tags: [readiness]
+      summary: Upload raw recovery signals (E4-S1)
+      description: >
+        Idempotent on (kind, day). Gated by health-data consent — returns 403 if
+        the user has not consented (E1-S4). The backend computes its own readiness
+        from these raw samples; it does not store a vendor score.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                samples:
+                  type: array
+                  items: { $ref: "#/components/schemas/HealthSignal" }
+      responses:
+        "204": { description: Stored }
+        "403": { description: Health-data consent required }
+
+  /readiness:
+    get:
+      tags: [readiness]
+      summary: Today's readiness with explanation (E4-S2/S3)
+      description: >
+        Computed from raw HRV/RHR/sleep vs the user's rolling baseline. Degrades to
+        a neutral, low-confidence score when data is missing. The explanation names
+        the main drivers in plain language with no medical claims.
+      responses:
+        "200":
+          description: Readiness score
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -784,6 +822,22 @@ components:
         guidance: { type: array, items: { type: string } }
         pattern: { type: string }
         disclaimer: { type: string }
+
+    HealthSignal:
+      type: object
+      required: [kind, value, day]
+      properties:
+        kind: { type: string, enum: [hrv_ms, rhr_bpm, sleep_minutes] }
+        value: { type: number }
+        day: { type: string, format: date, description: "YYYY-MM-DD the sample pertains to" }
+
+    Readiness:
+      type: object
+      properties:
+        value: { type: integer, description: "0-100 (50 = neutral)" }
+        confidence: { type: string, enum: [high, medium, low] }
+        drivers: { type: array, items: { type: string } }
+        explanation: { type: string, description: Plain-language, no medical claims }
 
     ValidationError:
       type: object
