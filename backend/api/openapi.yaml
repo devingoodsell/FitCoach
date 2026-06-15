@@ -20,6 +20,7 @@ tags:
   - name: memory
   - name: onboarding
   - name: locations
+  - name: diet
 
 paths:
   /healthz:
@@ -527,6 +528,41 @@ paths:
               schema: { $ref: "#/components/schemas/CurrentContext" }
         "404": { description: Location not found }
 
+  /diet/targets:
+    get:
+      tags: [diet]
+      summary: Daily calorie/protein targets and preference-aware guidance (E11-S1/S2)
+      description: >
+        Computed from profile, goals, schedule, and dietary pattern in Coach
+        Memory. Framed as guidance, not medical advice. low_confidence is true when
+        inputs (e.g. weight) are missing.
+      responses:
+        "200":
+          description: Targets, guidance, and disclaimer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DietTargets" }
+
+  /diet/post-workout-note:
+    get:
+      tags: [diet]
+      summary: Brief post-session nutrition note (E11-S3)
+      parameters:
+        - name: intensity
+          in: query
+          required: false
+          schema: { type: string, enum: [heavy, light], default: light }
+      responses:
+        "200":
+          description: Preference-aware, non-prescriptive note + disclaimer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  note: { type: string }
+                  disclaimer: { type: string }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -733,6 +769,21 @@ components:
           type: array
           items: { $ref: "#/components/schemas/Location" }
         current_context: { $ref: "#/components/schemas/CurrentContext" }
+
+    DietTargets:
+      type: object
+      properties:
+        targets:
+          type: object
+          properties:
+            calories_min: { type: integer }
+            calories_max: { type: integer }
+            protein_min_g: { type: integer }
+            protein_max_g: { type: integer }
+            low_confidence: { type: boolean }
+        guidance: { type: array, items: { type: string } }
+        pattern: { type: string }
+        disclaimer: { type: string }
 
     ValidationError:
       type: object

@@ -19,6 +19,7 @@ import (
 
 	"pro.d11l.fitcoach/backend/internal/auth"
 	"pro.d11l.fitcoach/backend/internal/consent"
+	"pro.d11l.fitcoach/backend/internal/diet"
 	"pro.d11l.fitcoach/backend/internal/disclaimer"
 	"pro.d11l.fitcoach/backend/internal/location"
 	"pro.d11l.fitcoach/backend/internal/memory"
@@ -76,6 +77,7 @@ func run(args []string) error {
 	memoryHandler := memory.NewHandler(memoryStore, logger)
 	onboardingHandler := onboarding.NewHandler(onboarding.NewService(memoryStore, nil), logger)
 	locationHandler := location.NewHandler(location.NewService(memoryStore, nil), logger)
+	dietHandler := diet.NewHandler(diet.NewService(memoryStore, nil), logger)
 
 	router := httpx.NewRouter()
 	router.Use(logging.Middleware(logger))
@@ -87,6 +89,7 @@ func run(args []string) error {
 	memoryHandler.Register(router, requireAuth)
 	onboardingHandler.Register(router, requireAuth)
 	locationHandler.Register(router, requireAuth)
+	dietHandler.Register(router, requireAuth)
 
 	return serve(cfg, logger, router)
 }
