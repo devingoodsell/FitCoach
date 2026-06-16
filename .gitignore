@@ -19,6 +19,7 @@ go.work.sum
 
 # ─── Android / Gradle / Kotlin ─────────────────────────────────────────────
 /android/.gradle/
+/android/.kotlin/
 /android/build/
 /android/app/build/
 /android/captures/

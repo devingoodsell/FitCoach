@@ -39,6 +39,8 @@ import pro.d11l.fitcoach.feature.onboarding.OnboardingScreen
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.readiness.ReadinessScreen
 import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
+import pro.d11l.fitcoach.feature.session.SessionScreen
+import pro.d11l.fitcoach.feature.session.SessionViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsScreen
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
@@ -59,7 +61,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Step { Auth, Consent, Onboarding, Home, Locations, Diet, Readiness, Injuries, Settings }
+private enum class Step { Auth, Consent, Onboarding, Home, Session, Locations, Diet, Readiness, Injuries, Settings }
 
 @Composable
 private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
@@ -85,12 +87,17 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
             OnboardingScreen(vm) { step = Step.Home }
         }
         Step.Home -> HomeScreen(
+            onStartWorkout = { step = Step.Session },
             onOpenSettings = { step = Step.Settings },
             onOpenLocations = { step = Step.Locations },
             onOpenDiet = { step = Step.Diet },
             onOpenReadiness = { step = Step.Readiness },
             onOpenInjuries = { step = Step.Injuries },
         )
+        Step.Session -> {
+            val vm: SessionViewModel = viewModel(key = "session-$epoch", factory = factory)
+            SessionScreen(vm) { step = Step.Home }
+        }
         Step.Locations -> {
             val vm: LocationViewModel = viewModel(key = "locations-$epoch", factory = factory)
             LocationScreen(vm) { step = Step.Home }
@@ -119,6 +126,7 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
 
 @Composable
 private fun HomeScreen(
+    onStartWorkout: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenLocations: () -> Unit,
     onOpenDiet: () -> Unit,
@@ -131,9 +139,10 @@ private fun HomeScreen(
     ) {
         Text("FitCoach", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "You're signed in. Your first generated workout arrives in a later milestone.",
+            "You're signed in. Tap Start workout to generate today's session.",
             style = MaterialTheme.typography.bodyMedium,
         )
+        Button(onClick = onStartWorkout, modifier = Modifier.fillMaxWidth()) { Text("Start workout") }
         Button(onClick = onOpenReadiness, modifier = Modifier.fillMaxWidth()) { Text("Readiness") }
         Button(onClick = onOpenInjuries, modifier = Modifier.fillMaxWidth()) { Text("Injuries") }
         Button(onClick = onOpenLocations, modifier = Modifier.fillMaxWidth()) { Text("Locations") }

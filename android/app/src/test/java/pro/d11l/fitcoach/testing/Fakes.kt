@@ -216,6 +216,20 @@ class FakeApi : FitCoachApi {
 
     override suspend fun parseInjury(body: pro.d11l.fitcoach.core.network.ParseInjuryRequest): Response<InjuryDraftDto> =
         Response.success(parseDraft)
+
+    // sessions
+    var sessionResponse: Response<pro.d11l.fitcoach.core.network.SessionDto>? = null
+    var replanResponse: pro.d11l.fitcoach.core.network.ReplanCheckDto =
+        pro.d11l.fitcoach.core.network.ReplanCheckDto(replanNeeded = false)
+    var lastReplanSince: String? = null
+
+    override suspend fun generateSession(): Response<pro.d11l.fitcoach.core.network.SessionDto> =
+        sessionResponse ?: errorResponse(500)
+
+    override suspend fun replanCheck(since: String): Response<pro.d11l.fitcoach.core.network.ReplanCheckDto> {
+        lastReplanSince = since
+        return Response.success(replanResponse)
+    }
 }
 
 /** Builds a Retrofit-style error response with the given status code. */

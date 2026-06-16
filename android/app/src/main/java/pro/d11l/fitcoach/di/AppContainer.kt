@@ -13,6 +13,7 @@ import pro.d11l.fitcoach.data.MemoryRepository
 import pro.d11l.fitcoach.data.OnboardingRepository
 import pro.d11l.fitcoach.data.ReadinessRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
+import pro.d11l.fitcoach.data.SessionRepository
 
 /**
  * Manual dependency container (lightweight DI). Holds singletons for the process
@@ -31,4 +32,5 @@ class AppContainer(context: Context) {
     val dietRepository = DietRepository(api)
     val readinessRepository = ReadinessRepository(api)
     val injuryRepository = InjuryRepository(api)
+    val sessionRepository = SessionRepository(api)
 }

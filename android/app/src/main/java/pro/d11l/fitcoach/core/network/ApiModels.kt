@@ -212,3 +212,76 @@ data class InjuryDraftDto(
 
 @Serializable
 data class ParseInjuryRequest(val text: String)
+
+/** Session DTOs (mirror the Session schema in the contract — the generated
+ *  workout the client renders, caches offline, and autoregulates against). */
+
+@Serializable
+data class SessionDto(
+    val id: String,
+    @SerialName("generated_at") val generatedAt: String,
+    @SerialName("schema_version") val schemaVersion: Int,
+    val model: String? = null,
+    @SerialName("inputs_summary") val inputsSummary: SessionInputsSummaryDto? = null,
+    val warmup: List<SessionExerciseDto> = emptyList(),
+    @SerialName("main_work") val mainWork: List<SessionExerciseDto> = emptyList(),
+    val accessory: List<SessionExerciseDto> = emptyList(),
+    @SerialName("aging_block") val agingBlock: AgingBlockDto,
+    val reasoning: List<ReasoningNoteDto> = emptyList(),
+    @SerialName("safety_findings") val safetyFindings: List<SafetyFindingDto> = emptyList(),
+    val disclaimer: String,
+)
+
+@Serializable
+data class SessionInputsSummaryDto(
+    @SerialName("readiness_value") val readinessValue: Int? = null,
+    @SerialName("readiness_confidence") val readinessConfidence: String? = null,
+    @SerialName("contraindication_count") val contraindicationCount: Int? = null,
+    @SerialName("location_name") val locationName: String? = null,
+    @SerialName("aging_emphases") val agingEmphases: List<String> = emptyList(),
+)
+
+@Serializable
+data class SessionExerciseDto(
+    val name: String,
+    val movement: String,
+    val region: String? = null,
+    val sets: List<SetPrescriptionDto> = emptyList(),
+    val notes: String? = null,
+)
+
+@Serializable
+data class SetPrescriptionDto(
+    val type: String,
+    val reps: Int? = null,
+    @SerialName("load_kg") val loadKg: Double? = null,
+    @SerialName("rpe_target") val rpeTarget: Double? = null,
+    @SerialName("duration_sec") val durationSec: Int? = null,
+    @SerialName("rest_sec") val restSec: Int? = null,
+)
+
+@Serializable
+data class AgingBlockDto(
+    val emphases: List<String> = emptyList(),
+    val items: List<SessionExerciseDto> = emptyList(),
+)
+
+@Serializable
+data class ReasoningNoteDto(
+    val text: String,
+    val tag: String? = null,
+)
+
+@Serializable
+data class SafetyFindingDto(
+    val rule: String,
+    val action: String,
+    val detail: String? = null,
+)
+
+/** Re-plan check DTO (mirrors GET /sessions/replan-check). */
+@Serializable
+data class ReplanCheckDto(
+    @SerialName("replan_needed") val replanNeeded: Boolean,
+    val reasons: List<String> = emptyList(),
+)

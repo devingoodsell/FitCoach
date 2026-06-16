@@ -103,4 +103,12 @@ interface FitCoachApi {
 
     @POST("injuries/parse")
     suspend fun parseInjury(@Body body: ParseInjuryRequest): Response<InjuryDraftDto>
+
+    // Session generation is the single server-side Claude call; the client never
+    // calls Anthropic directly.
+    @POST("sessions/generate")
+    suspend fun generateSession(): Response<SessionDto>
+
+    @GET("sessions/replan-check")
+    suspend fun replanCheck(@Query("since") since: String): Response<ReplanCheckDto>
 }

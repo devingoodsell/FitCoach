@@ -9,6 +9,7 @@ import pro.d11l.fitcoach.feature.injury.InjuryViewModel
 import pro.d11l.fitcoach.feature.location.LocationViewModel
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
+import pro.d11l.fitcoach.feature.session.SessionViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
 /** Constructs ViewModels with their dependencies from the [AppContainer]. */
@@ -29,6 +30,8 @@ class AppViewModelFactory(private val container: AppContainer) : ViewModelProvid
             ReadinessViewModel(container.readinessRepository) as T
         modelClass.isAssignableFrom(InjuryViewModel::class.java) ->
             InjuryViewModel(container.injuryRepository) as T
+        modelClass.isAssignableFrom(SessionViewModel::class.java) ->
+            SessionViewModel(container.sessionRepository) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
             SettingsViewModel(container.authRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
