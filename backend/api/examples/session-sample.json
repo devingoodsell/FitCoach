@@ -1,0 +1,105 @@
+{
+  "id": "0192f3a0-1c2d-7e00-9abc-0123456789ab",
+  "generated_at": "2026-06-16T13:30:00Z",
+  "schema_version": 1,
+  "model": "claude-opus-4-8",
+  "inputs_summary": {
+    "readiness_value": 72,
+    "readiness_confidence": "high",
+    "contraindication_count": 1,
+    "location_name": "Home gym",
+    "aging_emphases": ["bone_balance", "joint_tendon"]
+  },
+  "warmup": [
+    {
+      "name": "Cat-cow",
+      "movement": "spinal_flexion_extension",
+      "region": "spine",
+      "sets": [
+        { "type": "reps", "reps": 8, "rest_sec": 0 }
+      ],
+      "notes": "Slow, breathe with the movement."
+    },
+    {
+      "name": "Rower easy spin",
+      "movement": "row_erg",
+      "region": "full_body",
+      "sets": [
+        { "type": "time", "duration_sec": 180, "rpe_target": 3, "rest_sec": 0 }
+      ]
+    }
+  ],
+  "main_work": [
+    {
+      "name": "Goblet box squat",
+      "movement": "box_squat",
+      "region": "quad",
+      "sets": [
+        { "type": "reps", "reps": 8, "load_kg": 20.0, "rpe_target": 6, "rest_sec": 120 },
+        { "type": "reps", "reps": 8, "load_kg": 24.0, "rpe_target": 7, "rest_sec": 120 },
+        { "type": "reps", "reps": 8, "load_kg": 24.0, "rpe_target": 8, "rest_sec": 150 }
+      ],
+      "notes": "Box limits depth to keep load off the knee; sit back, don't crash down."
+    },
+    {
+      "name": "Dumbbell bench press",
+      "movement": "bench_press",
+      "region": "chest",
+      "sets": [
+        { "type": "reps", "reps": 9, "load_kg": 22.5, "rpe_target": 7, "rest_sec": 120 },
+        { "type": "reps", "reps": 9, "load_kg": 22.5, "rpe_target": 8, "rest_sec": 120 }
+      ]
+    }
+  ],
+  "accessory": [
+    {
+      "name": "Single-leg Romanian deadlift",
+      "movement": "single_leg_rdl",
+      "region": "hamstring",
+      "sets": [
+        { "type": "reps", "reps": 10, "load_kg": 12.0, "rpe_target": 7, "rest_sec": 75 },
+        { "type": "reps", "reps": 10, "load_kg": 12.0, "rpe_target": 7, "rest_sec": 75 }
+      ],
+      "notes": "Doubles as balance work."
+    },
+    {
+      "name": "Half-kneeling cable row",
+      "movement": "row",
+      "region": "back",
+      "sets": [
+        { "type": "reps", "reps": 12, "load_kg": 20.0, "rpe_target": 7, "rest_sec": 75 }
+      ]
+    }
+  ],
+  "aging_block": {
+    "emphases": ["bone_balance", "joint_tendon"],
+    "items": [
+      {
+        "name": "Pogo hops",
+        "movement": "low_amplitude_jump",
+        "region": "ankle",
+        "sets": [
+          { "type": "reps", "reps": 15, "rpe_target": 5, "rest_sec": 45 },
+          { "type": "reps", "reps": 15, "rpe_target": 6, "rest_sec": 45 }
+        ],
+        "notes": "Bone-loading and tendon stiffness; stay low and springy."
+      },
+      {
+        "name": "Tall-kneeling to standing",
+        "movement": "balance_transition",
+        "region": "hip",
+        "sets": [
+          { "type": "reps", "reps": 6, "rest_sec": 45 }
+        ],
+        "notes": "Balance and get-up capacity."
+      }
+    ]
+  },
+  "reasoning": [
+    { "text": "Held intensity around RPE 7-8 with 2-minute rests so each set stays high quality on a strong readiness day.", "tag": "intensity" },
+    { "text": "Box squat instead of a deep back squat keeps load off the managed knee while still training the legs hard.", "tag": "injury_accommodation" },
+    { "text": "Added pogo hops and a tall-kneeling get-up: at 45, bone density, tendon stiffness, and balance are worth training every session.", "tag": "age_aware" }
+  ],
+  "safety_findings": [],
+  "disclaimer": "FitCoach provides general fitness guidance, not medical advice. It is not a substitute for professional diagnosis or treatment. Consult a qualified clinician before starting a program or if you have pain, an injury, or a health condition."
+}

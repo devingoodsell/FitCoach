@@ -23,6 +23,7 @@ tags:
   - name: diet
   - name: readiness
   - name: injuries
+  - name: sessions
 
 paths:
   /healthz:
@@ -682,6 +683,57 @@ paths:
               schema: { $ref: "#/components/schemas/InjuryDraft" }
         "400": { description: Text required }
 
+  /sessions/generate:
+    post:
+      tags: [sessions]
+      summary: Generate a full workout session (E5-S1, E8-S1)
+      description: >
+        The single "Start workout" call. The server assembles Coach Memory +
+        today's readiness + active injuries (contraindications) + current
+        location/equipment + plan position, makes ONE server-side Claude call,
+        parses a structured session (warmup / main work with loads-reps-rests /
+        accessory / aging block + reasoning), and runs it through the
+        deterministic safety layer BEFORE returning. Loads are canonical kg; the
+        client converts to the user's preferred unit for display. The client may
+        cache the returned session for offline use (E5-S3). The Claude API key is
+        server-side only — the client never calls Anthropic directly.
+      responses:
+        "200":
+          description: A validated, ready-to-run session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "422":
+          description: A safe session could not be produced (e.g. unresolved contraindication)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /sessions/replan-check:
+    get:
+      tags: [sessions]
+      summary: Should the cached session be regenerated? (E5-S5)
+      description: >
+        Deterministic, no Claude call. Given the client's cached session
+        timestamp, reports whether the inputs that drove that plan have
+        materially changed — a new/changed injury, a current-context (location)
+        change, or a poor-recovery morning. The client regenerates when
+        replan_needed is true; otherwise it keeps using its offline cache and
+        re-plans on the next session by default.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: generated_at of the client's cached session (RFC 3339)
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Re-plan decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReplanCheck" }
+        "400": { description: Missing or invalid 'since' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -947,6 +999,103 @@ components:
       properties:
         injury: { $ref: "#/components/schemas/Injury" }
         low_confidence_fields: { type: array, items: { type: string } }
+
+    Session:
+      type: object
+      required: [id, generated_at, schema_version, warmup, main_work, accessory, aging_block, reasoning, disclaimer]
+      properties:
+        id: { type: string, description: Server-assigned session id (UUIDv7) }
+        generated_at: { type: string, format: date-time }
+        schema_version: { type: integer, const: 1 }
+        model: { type: string, description: Model id used (e.g. claude-opus-4-8) }
+        inputs_summary:
+          $ref: "#/components/schemas/SessionInputsSummary"
+        warmup:    { type: array, items: { $ref: "#/components/schemas/SessionExercise" } }
+        main_work: { type: array, items: { $ref: "#/components/schemas/SessionExercise" } }
+        accessory: { type: array, items: { $ref: "#/components/schemas/SessionExercise" } }
+        aging_block:
+          $ref: "#/components/schemas/AgingBlock"
+        reasoning:
+          type: array
+          description: 2–5 brief plain-language notes; no medical claims (E5-S2).
+          items: { $ref: "#/components/schemas/ReasoningNote" }
+        safety_findings:
+          type: array
+          description: Safety corrections applied (redacted detail). Empty on Pass.
+          items: { $ref: "#/components/schemas/SafetyFinding" }
+        disclaimer: { type: string, description: "guidance, not medical advice (E13-S1)" }
+
+    SessionExercise:
+      type: object
+      required: [name, movement, sets]
+      properties:
+        name:     { type: string, example: "Goblet squat" }
+        movement: { type: string, description: Canonical movement key for safety matching }
+        region:   { type: string, description: Body region, for injury matching }
+        sets:
+          type: array
+          items: { $ref: "#/components/schemas/SetPrescription" }
+        notes: { type: string }
+
+    SetPrescription:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [reps, time, distance] }
+        reps:         { type: integer, minimum: 1 }
+        load_kg:      { type: number,  minimum: 0, description: Canonical kilograms; omit for bodyweight }
+        rpe_target:   { type: number,  minimum: 1, maximum: 10 }
+        duration_sec: { type: integer, minimum: 1 }
+        rest_sec:     { type: integer, minimum: 0, description: Explicit rest after this set (E5-S1) }
+
+    AgingBlock:
+      type: object
+      required: [emphases, items]
+      description: Healthspan block — required in every session (E8-S1).
+      properties:
+        emphases:
+          type: array
+          description: Which aging emphases drove this block.
+          items: { type: string, enum: [bone_balance, joint_tendon, vo2max, cardio_base] }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SessionExercise" }
+
+    ReasoningNote:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        tag:  { type: string, enum: [intensity, exercise_choice, injury_accommodation, age_aware, recovery] }
+
+    SafetyFinding:
+      type: object
+      required: [rule, action]
+      properties:
+        rule:   { type: string }
+        action: { type: string, enum: [cap, block] }
+        detail: { type: string }
+
+    SessionInputsSummary:
+      type: object
+      description: Redacted summary of what fed generation (audit aid).
+      properties:
+        readiness_value: { type: integer }
+        readiness_confidence: { type: string, enum: [high, medium, low] }
+        contraindication_count: { type: integer }
+        location_name: { type: string }
+        aging_emphases:
+          type: array
+          items: { type: string }
+
+    ReplanCheck:
+      type: object
+      required: [replan_needed, reasons]
+      properties:
+        replan_needed: { type: boolean }
+        reasons:
+          type: array
+          items: { type: string, enum: [injury_changed, context_changed, poor_recovery] }
 
     ValidationError:
       type: object
