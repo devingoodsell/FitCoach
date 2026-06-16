@@ -22,6 +22,7 @@ tags:
   - name: locations
   - name: diet
   - name: readiness
+  - name: injuries
 
 paths:
   /healthz:
@@ -601,6 +602,86 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Readiness" }
 
+  /injuries:
+    get:
+      tags: [injuries]
+      summary: List injuries (E7-S1/S2)
+      responses:
+        "200":
+          description: Injuries document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InjuriesDoc" }
+    post:
+      tags: [injuries]
+      summary: Add an injury (E7-S1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Injury" }
+      responses:
+        "201":
+          description: Created injury
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Injury" }
+        "400": { description: Validation error }
+
+  /injuries/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [injuries]
+      summary: Update an injury / change status (E7-S2)
+      description: A status change marks a re-planning trigger (E5-S5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Injury" }
+      responses:
+        "200":
+          description: Updated injury
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Injury" }
+        "404": { description: Not found }
+    delete:
+      tags: [injuries]
+      summary: Remove an injury (E7-S2)
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /injuries/parse:
+    post:
+      tags: [injuries]
+      summary: Parse a freeform description into a reviewable draft (E7-S1)
+      description: >
+        Returns a best-effort structured draft for the user to review/correct
+        before saving; low_confidence_fields names uncertain slots. Heuristic
+        stand-in until the LLM-backed parser lands in E5.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        "200":
+          description: Draft for review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InjuryDraft" }
+        "400": { description: Text required }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -838,6 +919,34 @@ components:
         confidence: { type: string, enum: [high, medium, low] }
         drivers: { type: array, items: { type: string } }
         explanation: { type: string, description: Plain-language, no medical claims }
+
+    Injury:
+      type: object
+      required: [region, status]
+      properties:
+        id: { type: string, readOnly: true }
+        region: { type: string, example: left_knee }
+        status: { type: string, enum: [active_flare, managed, recurring_but_fine, resolved] }
+        severity: { type: string, enum: [mild, moderate, severe] }
+        aggravating_movements: { type: array, items: { type: string } }
+        onset_date: { type: string, format: date }
+        notes: { type: string }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    InjuriesDoc:
+      type: object
+      properties:
+        injuries:
+          type: array
+          items: { $ref: "#/components/schemas/Injury" }
+        changed_at: { type: string, format: date-time, description: Last lifecycle change (re-plan trigger) }
+
+    InjuryDraft:
+      type: object
+      properties:
+        injury: { $ref: "#/components/schemas/Injury" }
+        low_confidence_fields: { type: array, items: { type: string } }
 
     ValidationError:
       type: object
