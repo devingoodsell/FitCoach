@@ -7,6 +7,7 @@ import pro.d11l.fitcoach.core.db.FitCoachDatabase
 import pro.d11l.fitcoach.core.network.NetworkModule
 import pro.d11l.fitcoach.data.AuthRepository
 import pro.d11l.fitcoach.data.DietRepository
+import pro.d11l.fitcoach.data.InjuryRepository
 import pro.d11l.fitcoach.data.LocationRepository
 import pro.d11l.fitcoach.data.MemoryRepository
 import pro.d11l.fitcoach.data.OnboardingRepository
@@ -29,4 +30,5 @@ class AppContainer(context: Context) {
     val locationRepository = LocationRepository(api)
     val dietRepository = DietRepository(api)
     val readinessRepository = ReadinessRepository(api)
+    val injuryRepository = InjuryRepository(api)
 }

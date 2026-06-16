@@ -14,6 +14,9 @@ import pro.d11l.fitcoach.core.network.DietPrefsDto
 import pro.d11l.fitcoach.core.network.DietTargetsDto
 import pro.d11l.fitcoach.core.network.FitCoachApi
 import pro.d11l.fitcoach.core.network.GoalWeightsDto
+import pro.d11l.fitcoach.core.network.InjuriesDocDto
+import pro.d11l.fitcoach.core.network.InjuryDraftDto
+import pro.d11l.fitcoach.core.network.InjuryDto
 import pro.d11l.fitcoach.core.network.LocationDto
 import pro.d11l.fitcoach.core.network.LocationInputDto
 import pro.d11l.fitcoach.core.network.LocationsDocDto
@@ -94,6 +97,12 @@ class FakeApi : FitCoachApi {
     // readiness
     var readiness = ReadinessDto()
     var readinessError = false
+
+    // injuries
+    var injuriesDoc = InjuriesDocDto()
+    var parseDraft = InjuryDraftDto()
+    var lastAddedInjury: InjuryDto? = null
+    var lastUpdatedInjury: InjuryDto? = null
 
     override suspend fun signup(body: Credentials): Response<TokenPair> =
         signupResponse ?: Response.success(tokenPair)
@@ -184,6 +193,29 @@ class FakeApi : FitCoachApi {
 
     override suspend fun getReadiness(): Response<ReadinessDto> =
         if (readinessError) errorResponse(500) else Response.success(readiness)
+
+    override suspend fun getInjuries(): Response<InjuriesDocDto> = Response.success(injuriesDoc)
+
+    override suspend fun addInjury(body: InjuryDto): Response<InjuryDto> {
+        lastAddedInjury = body
+        val created = body.copy(id = "inj-${injuriesDoc.injuries.size + 1}")
+        injuriesDoc = injuriesDoc.copy(injuries = injuriesDoc.injuries + created)
+        return Response.success(created)
+    }
+
+    override suspend fun updateInjury(id: String, body: InjuryDto): Response<InjuryDto> {
+        lastUpdatedInjury = body.copy(id = id)
+        injuriesDoc = injuriesDoc.copy(injuries = injuriesDoc.injuries.map { if (it.id == id) body.copy(id = id) else it })
+        return Response.success(body.copy(id = id))
+    }
+
+    override suspend fun deleteInjury(id: String): Response<Unit> {
+        injuriesDoc = injuriesDoc.copy(injuries = injuriesDoc.injuries.filterNot { it.id == id })
+        return Response.success(Unit)
+    }
+
+    override suspend fun parseInjury(body: pro.d11l.fitcoach.core.network.ParseInjuryRequest): Response<InjuryDraftDto> =
+        Response.success(parseDraft)
 }
 
 /** Builds a Retrofit-style error response with the given status code. */

@@ -88,4 +88,19 @@ interface FitCoachApi {
 
     @GET("readiness")
     suspend fun getReadiness(): Response<ReadinessDto>
+
+    @GET("injuries")
+    suspend fun getInjuries(): Response<InjuriesDocDto>
+
+    @POST("injuries")
+    suspend fun addInjury(@Body body: InjuryDto): Response<InjuryDto>
+
+    @PUT("injuries/{id}")
+    suspend fun updateInjury(@Path("id") id: String, @Body body: InjuryDto): Response<InjuryDto>
+
+    @DELETE("injuries/{id}")
+    suspend fun deleteInjury(@Path("id") id: String): Response<Unit>
+
+    @POST("injuries/parse")
+    suspend fun parseInjury(@Body body: ParseInjuryRequest): Response<InjuryDraftDto>
 }

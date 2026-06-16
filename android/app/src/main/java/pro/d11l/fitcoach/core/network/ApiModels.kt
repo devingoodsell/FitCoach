@@ -184,3 +184,31 @@ data class ReadinessDto(
     val drivers: List<String> = emptyList(),
     val explanation: String = "",
 )
+
+/** Injury DTOs (mirror the injuries endpoints in the contract). */
+
+@Serializable
+data class InjuryDto(
+    val id: String = "",
+    val region: String,
+    val status: String,
+    val severity: String = "",
+    @SerialName("aggravating_movements") val aggravatingMovements: List<String> = emptyList(),
+    @SerialName("onset_date") val onsetDate: String? = null,
+    val notes: String = "",
+)
+
+@Serializable
+data class InjuriesDocDto(
+    val injuries: List<InjuryDto> = emptyList(),
+    @SerialName("changed_at") val changedAt: String? = null,
+)
+
+@Serializable
+data class InjuryDraftDto(
+    val injury: InjuryDto = InjuryDto(region = "", status = "active_flare"),
+    @SerialName("low_confidence_fields") val lowConfidenceFields: List<String> = emptyList(),
+)
+
+@Serializable
+data class ParseInjuryRequest(val text: String)
