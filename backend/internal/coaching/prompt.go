@@ -39,8 +39,9 @@ id, timestamp, model, disclaimer, and safety results.`
 // the derived planning context the engine resolved (so the model needn't compute
 // contraindications, age, or emphases itself).
 type promptInput struct {
-	CoachMemory json.RawMessage `json:"coach_memory"`
-	Derived     derivedContext  `json:"derived"`
+	CoachMemory    json.RawMessage `json:"coach_memory"`
+	Derived        derivedContext  `json:"derived"`
+	SafetyFeedback string          `json:"safety_feedback,omitempty"`
 }
 
 type derivedContext struct {
@@ -51,7 +52,9 @@ type derivedContext struct {
 }
 
 // buildPrompt assembles the user-turn JSON from the memory payload and derived
-// context. Deterministic given its inputs.
+// context. feedback, when non-empty, tells the model why a prior attempt was
+// rejected by the safety layer so it can avoid the same violation. Deterministic
+// given its inputs.
 func buildPrompt(
 	payload memory.PromptPayload,
 	age int,
@@ -59,6 +62,7 @@ func buildPrompt(
 	emphases *onboarding.AgingEmphases,
 	contra []injury.Contraindication,
 	equipment []string,
+	feedback string,
 ) ([]byte, error) {
 	mem, err := payload.Marshal()
 	if err != nil {
@@ -73,7 +77,7 @@ func buildPrompt(
 		a := age
 		d.Age = &a
 	}
-	return json.Marshal(promptInput{CoachMemory: mem, Derived: d})
+	return json.Marshal(promptInput{CoachMemory: mem, Derived: d, SafetyFeedback: feedback})
 }
 
 // generationSchema is the structured-output JSON schema for the MODEL-authored

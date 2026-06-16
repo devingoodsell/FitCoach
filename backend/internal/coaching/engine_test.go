@@ -14,6 +14,7 @@ import (
 	"pro.d11l.fitcoach/backend/internal/location"
 	"pro.d11l.fitcoach/backend/internal/memory"
 	"pro.d11l.fitcoach/backend/internal/readiness"
+	"pro.d11l.fitcoach/backend/internal/safety"
 )
 
 // --- fakes -------------------------------------------------------------------
@@ -38,10 +39,17 @@ func (f fakeReadiness) Today(context.Context, uuid.UUID) (readiness.Score, error
 	return f.score, nil
 }
 
-type fakeInjuries struct{ contra []injury.Contraindication }
+type fakeInjuries struct {
+	contra []injury.Contraindication
+	view   safety.MemoryView
+}
 
 func (f fakeInjuries) Contraindications(context.Context, uuid.UUID) ([]injury.Contraindication, error) {
 	return f.contra, nil
+}
+
+func (f fakeInjuries) SafetyView(context.Context, uuid.UUID) (safety.MemoryView, error) {
+	return f.view, nil
 }
 
 type fakeLocations struct{ doc location.Doc }
@@ -81,8 +89,13 @@ func jsonNumber(n int) string { b, _ := json.Marshal(n); return string(b) }
 
 func newTestEngine(t *testing.T, asm *fakeAssembler, gen Generator, contra []injury.Contraindication, loc location.Doc) *Engine {
 	t.Helper()
+	return newTestEngineFull(t, asm, gen, fakeInjuries{contra: contra}, loc, nil)
+}
+
+func newTestEngineFull(t *testing.T, asm *fakeAssembler, gen Generator, inj fakeInjuries, loc location.Doc, ev eventWriter) *Engine {
+	t.Helper()
 	e := NewEngine(asm, fakeReadiness{score: readiness.Score{Value: 72, Confidence: readiness.ConfidenceHigh}},
-		fakeInjuries{contra: contra}, fakeLocations{doc: loc}, gen, "claude-opus-4-8", nil)
+		inj, fakeLocations{doc: loc}, gen, ev, "claude-opus-4-8", nil)
 	e.now = func() time.Time { return time.Date(2026, 6, 16, 13, 0, 0, 0, time.UTC) }
 	e.newID = func() string { return "sess-fixed" }
 	return e
