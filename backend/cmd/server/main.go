@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"pro.d11l.fitcoach/backend/internal/auth"
+	"pro.d11l.fitcoach/backend/internal/coaching"
 	"pro.d11l.fitcoach/backend/internal/consent"
 	"pro.d11l.fitcoach/backend/internal/diet"
 	"pro.d11l.fitcoach/backend/internal/disclaimer"
@@ -27,6 +28,7 @@ import (
 	"pro.d11l.fitcoach/backend/internal/onboarding"
 	"pro.d11l.fitcoach/backend/internal/platform/config"
 	"pro.d11l.fitcoach/backend/internal/platform/db"
+	"pro.d11l.fitcoach/backend/internal/platform/events"
 	"pro.d11l.fitcoach/backend/internal/platform/httpx"
 	"pro.d11l.fitcoach/backend/internal/platform/logging"
 	"pro.d11l.fitcoach/backend/internal/readiness"
@@ -79,10 +81,25 @@ func run(args []string) error {
 	memoryStore := memory.NewStore(database, memory.NewUpgrader(), nil)
 	memoryHandler := memory.NewHandler(memoryStore, logger)
 	onboardingHandler := onboarding.NewHandler(onboarding.NewService(memoryStore, nil), logger)
-	locationHandler := location.NewHandler(location.NewService(memoryStore, nil), logger)
+	locationSvc := location.NewService(memoryStore, nil)
+	locationHandler := location.NewHandler(locationSvc, logger)
 	dietHandler := diet.NewHandler(diet.NewService(memoryStore, nil), logger)
-	readinessHandler := readiness.NewHandler(readiness.NewService(readiness.NewStore(database), consentStore, nil), logger)
-	injuryHandler := injury.NewHandler(injury.NewService(memoryStore, nil, nil), logger)
+	readinessSvc := readiness.NewService(readiness.NewStore(database), consentStore, nil)
+	readinessHandler := readiness.NewHandler(readinessSvc, logger)
+	injurySvc := injury.NewService(memoryStore, nil, nil)
+	injuryHandler := injury.NewHandler(injurySvc, logger)
+
+	// Coaching engine (E5/E8): the only path that calls Claude. The API key is
+	// read from server-side config and never reaches the client.
+	coachingEngine := coaching.NewEngine(
+		memory.NewAssembler(memoryStore, logger),
+		readinessSvc, injurySvc, locationSvc,
+		coaching.NewGenerator(cfg),
+		events.NewWriter(database, nil),
+		cfg.ClaudeModel, logger,
+	)
+	coachingReplanner := coaching.NewReplanner(injurySvc, locationSvc, readinessSvc, logger)
+	coachingHandler := coaching.NewHandler(coachingEngine, coachingReplanner, logger)
 
 	router := httpx.NewRouter()
 	router.Use(logging.Middleware(logger))
@@ -97,6 +114,7 @@ func run(args []string) error {
 	dietHandler.Register(router, requireAuth)
 	readinessHandler.Register(router, requireAuth)
 	injuryHandler.Register(router, requireAuth)
+	coachingHandler.Register(router, requireAuth)
 
 	return serve(cfg, logger, router)
 }
