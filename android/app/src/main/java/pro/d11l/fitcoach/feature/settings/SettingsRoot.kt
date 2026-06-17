@@ -8,10 +8,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pro.d11l.fitcoach.di.AppViewModelFactory
+import pro.d11l.fitcoach.feature.location.LocationScreen
+import pro.d11l.fitcoach.feature.location.LocationViewModel
 
-/** Editable Settings sections. PR1 ships profile/goals/schedule; later slices add
- *  preferences, diet, locations, aging emphases, and consent. */
-enum class SettingsRoute { Hub, Profile, Goals, Schedule }
+/** Editable Settings sections. Consent review is added in a later slice. */
+enum class SettingsRoute { Hub, Profile, Goals, Schedule, Preferences, Diet, Locations, Aging }
 
 /**
  * Hosts navigation within Settings as local state, so the app's top-level [Step]
@@ -48,6 +49,22 @@ fun SettingsRoot(factory: AppViewModelFactory, resetKey: Int, onSignedOut: () ->
         SettingsRoute.Schedule -> {
             val vm: EditScheduleViewModel = viewModel(key = "schedule-$visit", factory = factory)
             EditScheduleScreen(vm, onDone = back)
+        }
+        SettingsRoute.Preferences -> {
+            val vm: EditPreferencesViewModel = viewModel(key = "prefs-$visit", factory = factory)
+            EditPreferencesScreen(vm, onDone = back)
+        }
+        SettingsRoute.Diet -> {
+            val vm: EditDietViewModel = viewModel(key = "diet-$visit", factory = factory)
+            EditDietScreen(vm, onDone = back)
+        }
+        SettingsRoute.Locations -> {
+            val vm: LocationViewModel = viewModel(key = "settings-locations-$visit", factory = factory)
+            LocationScreen(vm, onBack = back)
+        }
+        SettingsRoute.Aging -> {
+            val vm: EditAgingViewModel = viewModel(key = "aging-$visit", factory = factory)
+            EditAgingScreen(vm, onDone = back)
         }
     }
 }

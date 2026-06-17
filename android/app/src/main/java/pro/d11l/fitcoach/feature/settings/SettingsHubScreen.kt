@@ -51,6 +51,10 @@ fun SettingsHubScreen(
         SettingsNavItem("Profile & physiology") { onNavigate(SettingsRoute.Profile) }
         SettingsNavItem("Goals") { onNavigate(SettingsRoute.Goals) }
         SettingsNavItem("Schedule") { onNavigate(SettingsRoute.Schedule) }
+        SettingsNavItem("Preferences") { onNavigate(SettingsRoute.Preferences) }
+        SettingsNavItem("Diet") { onNavigate(SettingsRoute.Diet) }
+        SettingsNavItem("Locations & current context") { onNavigate(SettingsRoute.Locations) }
+        SettingsNavItem("Aging emphases") { onNavigate(SettingsRoute.Aging) }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
