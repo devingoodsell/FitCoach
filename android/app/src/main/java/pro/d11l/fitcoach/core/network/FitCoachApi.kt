@@ -40,6 +40,9 @@ interface FitCoachApi {
     @GET("memory")
     suspend fun memory(): Response<MemorySections>
 
+    @GET("memory/{section}")
+    suspend fun getMemorySection(@Path("section") section: String): Response<MemorySection>
+
     @PUT("memory/{section}")
     suspend fun putSection(
         @Path("section") section: String,

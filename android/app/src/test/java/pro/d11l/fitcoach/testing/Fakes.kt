@@ -126,7 +126,16 @@ class FakeApi : FitCoachApi {
         return consentResponse
     }
 
+    // Coach Memory sections keyed by name, used to prefill Settings edit forms.
+    // Absent section -> 404 (mirrors the backend's "not set yet" response).
+    var memorySections: MutableMap<String, kotlinx.serialization.json.JsonElement> = mutableMapOf()
+
     override suspend fun memory(): Response<MemorySections> = memoryResponse
+
+    override suspend fun getMemorySection(section: String): Response<MemorySection> {
+        val data = memorySections[section] ?: return errorResponse(404)
+        return Response.success(MemorySection(section, 1, data))
+    }
 
     override suspend fun putSection(section: String, body: PutSectionRequest): Response<MemorySection> =
         Response.success(MemorySection(section, 1, kotlinx.serialization.json.JsonObject(emptyMap())))

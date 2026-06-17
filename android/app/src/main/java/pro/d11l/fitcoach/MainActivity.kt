@@ -41,8 +41,7 @@ import pro.d11l.fitcoach.feature.readiness.ReadinessScreen
 import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
 import pro.d11l.fitcoach.feature.session.SessionScreen
 import pro.d11l.fitcoach.feature.session.SessionViewModel
-import pro.d11l.fitcoach.feature.settings.SettingsScreen
-import pro.d11l.fitcoach.feature.settings.SettingsViewModel
+import pro.d11l.fitcoach.feature.settings.SettingsRoot
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,13 +113,14 @@ private fun AppRoot(factory: AppViewModelFactory, startLoggedIn: Boolean) {
             val vm: InjuryViewModel = viewModel(key = "injuries-$epoch", factory = factory)
             InjuryScreen(vm) { step = Step.Home }
         }
-        Step.Settings -> {
-            val vm: SettingsViewModel = viewModel(key = "settings-$epoch", factory = factory)
-            SettingsScreen(vm, onSignedOut = {
+        Step.Settings -> SettingsRoot(
+            factory = factory,
+            resetKey = epoch,
+            onSignedOut = {
                 epoch++
                 step = Step.Auth
-            })
-        }
+            },
+        )
     }
 }
 

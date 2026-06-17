@@ -72,6 +72,14 @@ data class ExperienceDto(
 )
 
 @Serializable
+data class AgingEmphasesDto(
+    @SerialName("bone_balance") val boneBalance: Double = 0.0,
+    @SerialName("joint_tendon") val jointTendon: Double = 0.0,
+    val vo2max: Double = 0.0,
+    @SerialName("cardio_base") val cardioBase: Double = 0.0,
+)
+
+@Serializable
 data class ProfileDto(
     val dob: String? = null,
     val age: Int? = null,
@@ -79,6 +87,9 @@ data class ProfileDto(
     @SerialName("height_cm") val heightCm: Double? = null,
     @SerialName("weight_kg") val weightKg: Double? = null,
     val experience: ExperienceDto,
+    // Defaulted from age server-side when null; carried through profile edits so a
+    // profile save never silently resets user-tuned aging emphases (E2-S8 / E14-PR2).
+    @SerialName("aging_emphases") val agingEmphases: AgingEmphasesDto? = null,
 )
 
 @Serializable
