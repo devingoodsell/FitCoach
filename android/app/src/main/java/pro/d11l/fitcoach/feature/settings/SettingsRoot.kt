@@ -11,8 +11,8 @@ import pro.d11l.fitcoach.di.AppViewModelFactory
 import pro.d11l.fitcoach.feature.location.LocationScreen
 import pro.d11l.fitcoach.feature.location.LocationViewModel
 
-/** Settings sections. Consent review is added in a later slice. */
-enum class SettingsRoute { Hub, Profile, Goals, Schedule, Preferences, Diet, Locations, Aging, Disclaimers }
+/** Settings sections. */
+enum class SettingsRoute { Hub, Profile, Goals, Schedule, Preferences, Diet, Locations, Aging, Disclaimers, Consent }
 
 /**
  * Hosts navigation within Settings as local state, so the app's top-level [Step]
@@ -67,5 +67,9 @@ fun SettingsRoot(factory: AppViewModelFactory, resetKey: Int, onSignedOut: () ->
             EditAgingScreen(vm, onDone = back)
         }
         SettingsRoute.Disclaimers -> DisclaimerScreen(onBack = back)
+        SettingsRoute.Consent -> {
+            val vm: ConsentReviewViewModel = viewModel(key = "consent-review-$visit", factory = factory)
+            ConsentReviewScreen(vm, onBack = back)
+        }
     }
 }

@@ -17,9 +17,13 @@ func IsValidType(t string) bool {
 	return t == TypeHealthData || t == TypeMedicalDisclaimer
 }
 
-// Consent is a single recorded acceptance.
+// Consent is the current state of a consent type: the latest acceptance, plus a
+// revocation timestamp when the user has since withdrawn it (E14-S2). A non-nil
+// RevokedAt means the consent is no longer in force (e.g. health-data ingestion
+// falls back to manual mode).
 type Consent struct {
-	Type       string    `json:"type"`
-	Version    string    `json:"version"`
-	AcceptedAt time.Time `json:"accepted_at"`
+	Type       string     `json:"type"`
+	Version    string     `json:"version"`
+	AcceptedAt time.Time  `json:"accepted_at"`
+	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
 }

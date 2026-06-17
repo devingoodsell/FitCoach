@@ -33,12 +33,14 @@ func (s *Store) Record(ctx context.Context, userID uuid.UUID, ctype, version str
 	return nil
 }
 
-// HasConsent reports whether the user has ever recorded a consent of the given
-// type (used to gate health-data ingestion in E4).
+// HasConsent reports whether the user currently holds an in-force consent of the
+// given type (used to gate health-data ingestion in E4). Revoked consents
+// (revoked_at set) and absent consents both read as false.
 func (s *Store) HasConsent(ctx context.Context, userID uuid.UUID, ctype string) (bool, error) {
 	var one int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT 1 FROM consents WHERE user_id = ? AND type = ? LIMIT 1`, userID[:], ctype).Scan(&one)
+		`SELECT 1 FROM consents WHERE user_id = ? AND type = ? AND revoked_at IS NULL LIMIT 1`,
+		userID[:], ctype).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -48,10 +50,25 @@ func (s *Store) HasConsent(ctx context.Context, userID uuid.UUID, ctype string) 
 	return true, nil
 }
 
-// List returns the current consent state: the most recent acceptance per type.
+// Revoke withdraws the user's in-force consent of the given type by stamping
+// revoked_at on every active row (E14-S2). It preserves the audit trail (the rows
+// remain) and is idempotent: revoking an absent or already-revoked consent is a
+// no-op. A subsequent Record (a fresh, un-revoked row) re-enables the consent.
+func (s *Store) Revoke(ctx context.Context, userID uuid.UUID, ctype string, now time.Time) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE consents SET revoked_at = ? WHERE user_id = ? AND type = ? AND revoked_at IS NULL`,
+		now, userID[:], ctype)
+	if err != nil {
+		return fmt.Errorf("revoke consent: %w", err)
+	}
+	return nil
+}
+
+// List returns the current consent state: the most recent acceptance per type,
+// including its revocation timestamp when withdrawn.
 func (s *Store) List(ctx context.Context, userID uuid.UUID) ([]Consent, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT type, version, accepted_at FROM consents WHERE user_id = ? ORDER BY accepted_at DESC`,
+		`SELECT type, version, accepted_at, revoked_at FROM consents WHERE user_id = ? ORDER BY accepted_at DESC`,
 		userID[:])
 	if err != nil {
 		return nil, fmt.Errorf("query consents: %w", err)
@@ -62,7 +79,7 @@ func (s *Store) List(ctx context.Context, userID uuid.UUID) ([]Consent, error) {
 	var out []Consent
 	for rows.Next() {
 		var c Consent
-		if err := rows.Scan(&c.Type, &c.Version, &c.AcceptedAt); err != nil {
+		if err := rows.Scan(&c.Type, &c.Version, &c.AcceptedAt, &c.RevokedAt); err != nil {
 			return nil, fmt.Errorf("scan consent: %w", err)
 		}
 		if seen[c.Type] {

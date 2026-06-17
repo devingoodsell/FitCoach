@@ -59,7 +59,8 @@ fun SettingsHubScreen(
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         Text("About", style = MaterialTheme.typography.labelLarge)
-        SettingsNavItem("Disclaimers") { onNavigate(SettingsRoute.Disclaimers) }
+        SettingsNavItem("Consent & disclaimers") { onNavigate(SettingsRoute.Consent) }
+        SettingsNavItem("Disclaimer text") { onNavigate(SettingsRoute.Disclaimers) }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

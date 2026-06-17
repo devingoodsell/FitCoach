@@ -129,11 +129,32 @@ class FakeApi : FitCoachApi {
     override suspend fun getDisclaimers(): Response<pro.d11l.fitcoach.core.network.DisclaimerDocDto> =
         if (disclaimerError) errorResponse(500) else Response.success(disclaimerDoc)
 
-    override suspend fun listConsent(): Response<ConsentList> = Response.success(ConsentList())
+    // Configurable consent state for the review/revoke surface.
+    var consentList: List<ConsentRecord> = emptyList()
+    var consentListError = false
+    var lastRevokedType: String? = null
+
+    override suspend fun listConsent(): Response<ConsentList> =
+        if (consentListError) errorResponse(500) else Response.success(ConsentList(consentList))
 
     override suspend fun recordConsent(body: ConsentRequest): Response<ConsentRecord> {
         lastConsent = body
         return consentResponse
+    }
+
+    override suspend fun revokeConsent(type: String): Response<ConsentRecord> {
+        lastRevokedType = type
+        // Mark the matching record revoked so a subsequent list reflects the change.
+        var revoked = ConsentRecord(type = type, version = "v1", revokedAt = "2026-06-16T09:00:00Z")
+        consentList = consentList.map {
+            if (it.type == type) {
+                revoked = it.copy(revokedAt = "2026-06-16T09:00:00Z")
+                revoked
+            } else {
+                it
+            }
+        }
+        return Response.success(revoked)
     }
 
     // Coach Memory sections keyed by name, used to prefill Settings edit forms.

@@ -218,6 +218,34 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsentRecord" }
 
+  /consent/{type}/revoke:
+    post:
+      tags: [consent]
+      summary: Revoke a previously granted consent (E14-S2)
+      description: >
+        Withdraws an in-force consent while preserving the audit trail (the
+        acceptance row is retained with revoked_at stamped). Idempotent: revoking
+        an absent or already-revoked consent still returns 200. Revoking
+        health_data flips HasConsent to false, disabling readiness ingestion (E4)
+        and reverting to manual mode. Re-granting via POST /consent re-enables it.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [health_data, medical_disclaimer]
+      responses:
+        "200":
+          description: Resulting consent state for the type (with revoked_at set)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsentRecord" }
+        "400":
+          description: Unknown consent type
+        "401":
+          description: Authentication required
+
   /account:
     delete:
       tags: [account]
@@ -793,6 +821,14 @@ components:
         type: { type: string }
         version: { type: string }
         accepted_at: { type: string, format: date-time }
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Set when the consent has been withdrawn (E14-S2). A non-null value means
+            the consent is no longer in force; for health_data this disables
+            readiness ingestion and reverts to manual mode.
 
     ConsentList:
       type: object

@@ -40,6 +40,9 @@ interface FitCoachApi {
     @POST("consent")
     suspend fun recordConsent(@Body body: ConsentRequest): Response<ConsentRecord>
 
+    @POST("consent/{type}/revoke")
+    suspend fun revokeConsent(@Path("type") type: String): Response<ConsentRecord>
+
     @GET("memory")
     suspend fun memory(): Response<MemorySections>
 

@@ -41,7 +41,11 @@ data class ConsentRecord(
     val type: String,
     val version: String,
     @SerialName("accepted_at") val acceptedAt: String? = null,
-)
+    @SerialName("revoked_at") val revokedAt: String? = null,
+) {
+    /** A consent is in force when it was accepted and not since revoked. */
+    val isActive: Boolean get() = revokedAt == null
+}
 
 @Serializable
 data class ConsentList(val consents: List<ConsentRecord> = emptyList())
