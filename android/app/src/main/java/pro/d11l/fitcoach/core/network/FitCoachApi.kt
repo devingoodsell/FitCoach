@@ -31,6 +31,9 @@ interface FitCoachApi {
     @POST("auth/reset/request")
     suspend fun requestReset(@Body body: ResetRequest): Response<Unit>
 
+    @GET("disclaimers")
+    suspend fun getDisclaimers(): Response<DisclaimerDocDto>
+
     @GET("consent")
     suspend fun listConsent(): Response<ConsentList>
 

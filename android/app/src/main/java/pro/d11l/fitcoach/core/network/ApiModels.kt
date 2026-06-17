@@ -27,6 +27,13 @@ data class ResetRequest(val email: String)
 data class DeleteAccountRequest(val password: String)
 
 @Serializable
+data class DisclaimerDocDto(
+    val version: String,
+    val medical: String,
+    @SerialName("health_data") val healthData: String,
+)
+
+@Serializable
 data class ConsentRequest(val type: String, val version: String)
 
 @Serializable

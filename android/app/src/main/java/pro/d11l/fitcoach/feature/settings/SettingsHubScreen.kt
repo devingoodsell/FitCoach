@@ -58,6 +58,11 @@ fun SettingsHubScreen(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+        Text("About", style = MaterialTheme.typography.labelLarge)
+        SettingsNavItem("Disclaimers") { onNavigate(SettingsRoute.Disclaimers) }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
         Text("Account", style = MaterialTheme.typography.labelLarge)
         OutlinedButton(
             onClick = viewModel::logout,

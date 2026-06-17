@@ -119,6 +119,16 @@ class FakeApi : FitCoachApi {
 
     override suspend fun requestReset(body: ResetRequest): Response<Unit> = Response.success(Unit)
 
+    var disclaimerDoc = pro.d11l.fitcoach.core.network.DisclaimerDocDto(
+        version = "v1",
+        medical = "server medical copy",
+        healthData = "server health-data copy",
+    )
+    var disclaimerError = false
+
+    override suspend fun getDisclaimers(): Response<pro.d11l.fitcoach.core.network.DisclaimerDocDto> =
+        if (disclaimerError) errorResponse(500) else Response.success(disclaimerDoc)
+
     override suspend fun listConsent(): Response<ConsentList> = Response.success(ConsentList())
 
     override suspend fun recordConsent(body: ConsentRequest): Response<ConsentRecord> {

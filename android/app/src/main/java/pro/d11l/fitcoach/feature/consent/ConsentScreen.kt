@@ -17,7 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import pro.d11l.fitcoach.core.designsystem.Disclaimers
+import pro.d11l.fitcoach.core.designsystem.LocalDisclaimers
 import pro.d11l.fitcoach.core.designsystem.MedicalDisclaimer
 
 @Composable
@@ -33,7 +33,7 @@ fun ConsentScreen(viewModel: ConsentViewModel, onDecided: (manualMode: Boolean) 
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Your health data", style = MaterialTheme.typography.headlineSmall)
-        Text(Disclaimers.HEALTH_DATA, style = MaterialTheme.typography.bodyMedium)
+        Text(LocalDisclaimers.current.healthData, style = MaterialTheme.typography.bodyMedium)
         MedicalDisclaimer(modifier = Modifier.fillMaxWidth())
 
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
