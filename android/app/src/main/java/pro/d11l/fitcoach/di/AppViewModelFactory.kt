@@ -10,6 +10,13 @@ import pro.d11l.fitcoach.feature.location.LocationViewModel
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
 import pro.d11l.fitcoach.feature.session.SessionViewModel
+import pro.d11l.fitcoach.feature.settings.ConsentReviewViewModel
+import pro.d11l.fitcoach.feature.settings.EditAgingViewModel
+import pro.d11l.fitcoach.feature.settings.EditDietViewModel
+import pro.d11l.fitcoach.feature.settings.EditGoalsViewModel
+import pro.d11l.fitcoach.feature.settings.EditPreferencesViewModel
+import pro.d11l.fitcoach.feature.settings.EditProfileViewModel
+import pro.d11l.fitcoach.feature.settings.EditScheduleViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsViewModel
 
 /** Constructs ViewModels with their dependencies from the [AppContainer]. */
@@ -34,6 +41,20 @@ class AppViewModelFactory(private val container: AppContainer) : ViewModelProvid
             SessionViewModel(container.sessionRepository) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
             SettingsViewModel(container.authRepository) as T
+        modelClass.isAssignableFrom(EditProfileViewModel::class.java) ->
+            EditProfileViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(EditGoalsViewModel::class.java) ->
+            EditGoalsViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(EditScheduleViewModel::class.java) ->
+            EditScheduleViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(EditPreferencesViewModel::class.java) ->
+            EditPreferencesViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(EditDietViewModel::class.java) ->
+            EditDietViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(EditAgingViewModel::class.java) ->
+            EditAgingViewModel(container.onboardingRepository) as T
+        modelClass.isAssignableFrom(ConsentReviewViewModel::class.java) ->
+            ConsentReviewViewModel(container.consentRepository) as T
         else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
     }
 }

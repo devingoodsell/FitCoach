@@ -27,6 +27,13 @@ data class ResetRequest(val email: String)
 data class DeleteAccountRequest(val password: String)
 
 @Serializable
+data class DisclaimerDocDto(
+    val version: String,
+    val medical: String,
+    @SerialName("health_data") val healthData: String,
+)
+
+@Serializable
 data class ConsentRequest(val type: String, val version: String)
 
 @Serializable
@@ -34,7 +41,11 @@ data class ConsentRecord(
     val type: String,
     val version: String,
     @SerialName("accepted_at") val acceptedAt: String? = null,
-)
+    @SerialName("revoked_at") val revokedAt: String? = null,
+) {
+    /** A consent is in force when it was accepted and not since revoked. */
+    val isActive: Boolean get() = revokedAt == null
+}
 
 @Serializable
 data class ConsentList(val consents: List<ConsentRecord> = emptyList())
@@ -72,6 +83,14 @@ data class ExperienceDto(
 )
 
 @Serializable
+data class AgingEmphasesDto(
+    @SerialName("bone_balance") val boneBalance: Double = 0.0,
+    @SerialName("joint_tendon") val jointTendon: Double = 0.0,
+    val vo2max: Double = 0.0,
+    @SerialName("cardio_base") val cardioBase: Double = 0.0,
+)
+
+@Serializable
 data class ProfileDto(
     val dob: String? = null,
     val age: Int? = null,
@@ -79,6 +98,9 @@ data class ProfileDto(
     @SerialName("height_cm") val heightCm: Double? = null,
     @SerialName("weight_kg") val weightKg: Double? = null,
     val experience: ExperienceDto,
+    // Defaulted from age server-side when null; carried through profile edits so a
+    // profile save never silently resets user-tuned aging emphases (E2-S8 / E14-PR2).
+    @SerialName("aging_emphases") val agingEmphases: AgingEmphasesDto? = null,
 )
 
 @Serializable

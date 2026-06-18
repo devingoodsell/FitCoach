@@ -6,7 +6,9 @@ import pro.d11l.fitcoach.core.auth.KeystoreTokenStorage
 import pro.d11l.fitcoach.core.db.FitCoachDatabase
 import pro.d11l.fitcoach.core.network.NetworkModule
 import pro.d11l.fitcoach.data.AuthRepository
+import pro.d11l.fitcoach.data.ConsentRepository
 import pro.d11l.fitcoach.data.DietRepository
+import pro.d11l.fitcoach.data.DisclaimerRepository
 import pro.d11l.fitcoach.data.InjuryRepository
 import pro.d11l.fitcoach.data.LocationRepository
 import pro.d11l.fitcoach.data.MemoryRepository
@@ -28,6 +30,8 @@ class AppContainer(context: Context) {
     val authRepository = AuthRepository(api, tokenStorage, memoryCache)
     val memoryRepository = MemoryRepository(api, memoryCache)
     val onboardingRepository = OnboardingRepository(api)
+    val disclaimerRepository = DisclaimerRepository(api)
+    val consentRepository = ConsentRepository(api)
     val locationRepository = LocationRepository(api)
     val dietRepository = DietRepository(api)
     val readinessRepository = ReadinessRepository(api)

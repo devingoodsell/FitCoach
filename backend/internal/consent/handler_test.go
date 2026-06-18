@@ -43,6 +43,16 @@ func (f *fakeStore) List(_ context.Context, userID uuid.UUID) ([]Consent, error)
 	return out, nil
 }
 
+func (f *fakeStore) Revoke(_ context.Context, userID uuid.UUID, ctype string, now time.Time) error {
+	for i, c := range f.records[userID] {
+		if c.Type == ctype && c.RevokedAt == nil {
+			ts := now
+			f.records[userID][i].RevokedAt = &ts
+		}
+	}
+	return nil
+}
+
 // fakeAuth always authenticates as a fixed user, so RequireAuth populates context.
 type fakeAuth struct{ id uuid.UUID }
 
@@ -99,6 +109,59 @@ func TestListReturnsLatestVersionPerType(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
 	if len(resp.Consents) != 1 || resp.Consents[0].Version != "v2" {
 		t.Fatalf("expected latest v2 only, got %+v", resp.Consents)
+	}
+}
+
+func TestRevokeMarksConsentRevoked(t *testing.T) {
+	uid, _ := uuid.NewV7()
+	revokeAt := time.Date(2026, 6, 16, 9, 0, 0, 0, time.UTC)
+	h := NewHandler(newFakeStore(), logging.New(io.Discard, "error"),
+		func() time.Time { return revokeAt })
+	r := newTestRouter(h, uid)
+
+	if rec := do(r, http.MethodPost, "/consent", `{"type":"health_data","version":"v1"}`); rec.Code != http.StatusCreated {
+		t.Fatalf("record status = %d, want 201", rec.Code)
+	}
+
+	rec := do(r, http.MethodPost, "/consent/health_data/revoke", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("revoke status = %d, want 200 (%s)", rec.Code, rec.Body)
+	}
+	var revoked Consent
+	if err := json.Unmarshal(rec.Body.Bytes(), &revoked); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if revoked.RevokedAt == nil || !revoked.RevokedAt.Equal(revokeAt) {
+		t.Fatalf("expected revoked_at = %v, got %+v", revokeAt, revoked)
+	}
+
+	// The current state now shows health_data as revoked.
+	rec = do(r, http.MethodGet, "/consent", "")
+	var resp listResponse
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+	if len(resp.Consents) != 1 || resp.Consents[0].RevokedAt == nil {
+		t.Fatalf("expected health_data revoked in list, got %+v", resp.Consents)
+	}
+}
+
+func TestRevokeIsIdempotentForAbsentConsent(t *testing.T) {
+	uid, _ := uuid.NewV7()
+	h := NewHandler(newFakeStore(), logging.New(io.Discard, "error"), nil)
+	r := newTestRouter(h, uid)
+
+	// Never consented to health_data; revoking is still a successful no-op.
+	if rec := do(r, http.MethodPost, "/consent/health_data/revoke", ""); rec.Code != http.StatusOK {
+		t.Fatalf("revoke status = %d, want 200", rec.Code)
+	}
+}
+
+func TestRevokeRejectsUnknownType(t *testing.T) {
+	uid, _ := uuid.NewV7()
+	h := NewHandler(newFakeStore(), logging.New(io.Discard, "error"), nil)
+	r := newTestRouter(h, uid)
+
+	if rec := do(r, http.MethodPost, "/consent/marketing/revoke", ""); rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
 	}
 }
 

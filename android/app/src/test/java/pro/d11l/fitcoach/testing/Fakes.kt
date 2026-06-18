@@ -119,14 +119,54 @@ class FakeApi : FitCoachApi {
 
     override suspend fun requestReset(body: ResetRequest): Response<Unit> = Response.success(Unit)
 
-    override suspend fun listConsent(): Response<ConsentList> = Response.success(ConsentList())
+    var disclaimerDoc = pro.d11l.fitcoach.core.network.DisclaimerDocDto(
+        version = "v1",
+        medical = "server medical copy",
+        healthData = "server health-data copy",
+    )
+    var disclaimerError = false
+
+    override suspend fun getDisclaimers(): Response<pro.d11l.fitcoach.core.network.DisclaimerDocDto> =
+        if (disclaimerError) errorResponse(500) else Response.success(disclaimerDoc)
+
+    // Configurable consent state for the review/revoke surface.
+    var consentList: List<ConsentRecord> = emptyList()
+    var consentListError = false
+    var lastRevokedType: String? = null
+
+    override suspend fun listConsent(): Response<ConsentList> =
+        if (consentListError) errorResponse(500) else Response.success(ConsentList(consentList))
 
     override suspend fun recordConsent(body: ConsentRequest): Response<ConsentRecord> {
         lastConsent = body
         return consentResponse
     }
 
+    override suspend fun revokeConsent(type: String): Response<ConsentRecord> {
+        lastRevokedType = type
+        // Mark the matching record revoked so a subsequent list reflects the change.
+        var revoked = ConsentRecord(type = type, version = "v1", revokedAt = "2026-06-16T09:00:00Z")
+        consentList = consentList.map {
+            if (it.type == type) {
+                revoked = it.copy(revokedAt = "2026-06-16T09:00:00Z")
+                revoked
+            } else {
+                it
+            }
+        }
+        return Response.success(revoked)
+    }
+
+    // Coach Memory sections keyed by name, used to prefill Settings edit forms.
+    // Absent section -> 404 (mirrors the backend's "not set yet" response).
+    var memorySections: MutableMap<String, kotlinx.serialization.json.JsonElement> = mutableMapOf()
+
     override suspend fun memory(): Response<MemorySections> = memoryResponse
+
+    override suspend fun getMemorySection(section: String): Response<MemorySection> {
+        val data = memorySections[section] ?: return errorResponse(404)
+        return Response.success(MemorySection(section, 1, data))
+    }
 
     override suspend fun putSection(section: String, body: PutSectionRequest): Response<MemorySection> =
         Response.success(MemorySection(section, 1, kotlinx.serialization.json.JsonObject(emptyMap())))

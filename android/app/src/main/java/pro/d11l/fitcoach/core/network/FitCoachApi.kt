@@ -31,14 +31,23 @@ interface FitCoachApi {
     @POST("auth/reset/request")
     suspend fun requestReset(@Body body: ResetRequest): Response<Unit>
 
+    @GET("disclaimers")
+    suspend fun getDisclaimers(): Response<DisclaimerDocDto>
+
     @GET("consent")
     suspend fun listConsent(): Response<ConsentList>
 
     @POST("consent")
     suspend fun recordConsent(@Body body: ConsentRequest): Response<ConsentRecord>
 
+    @POST("consent/{type}/revoke")
+    suspend fun revokeConsent(@Path("type") type: String): Response<ConsentRecord>
+
     @GET("memory")
     suspend fun memory(): Response<MemorySections>
+
+    @GET("memory/{section}")
+    suspend fun getMemorySection(@Path("section") section: String): Response<MemorySection>
 
     @PUT("memory/{section}")
     suspend fun putSection(
