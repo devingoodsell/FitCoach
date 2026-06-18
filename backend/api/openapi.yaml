@@ -692,8 +692,9 @@ paths:
       summary: Parse a freeform description into a reviewable draft (E7-S1)
       description: >
         Returns a best-effort structured draft for the user to review/correct
-        before saving; low_confidence_fields names uncertain slots. Heuristic
-        stand-in until the LLM-backed parser lands in E5.
+        before saving; low_confidence_fields names uncertain slots. Backed by a
+        server-side Claude call (E7-PR2); falls back to a deterministic heuristic
+        when the model is unavailable. The API key never leaves the backend.
       requestBody:
         required: true
         content:
