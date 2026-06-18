@@ -88,11 +88,13 @@ func run(args []string) error {
 	readinessHandler := readiness.NewHandler(readinessSvc, logger)
 
 	// The Claude-backed generator is the single server-side seam to Anthropic. The
-	// injury natural-language parse (E7-PR2) reaches it through a thin adapter so it
-	// never imports coaching or sees the key.
+	// injury natural-language parse (E7-PR2) and identification assist (E7-PR7)
+	// reach it through a thin adapter so they never import coaching or see the key.
 	generator := coaching.NewGenerator(cfg)
-	injurySvc := injury.NewService(memoryStore, injury.NewLLMParser(coaching.InjuryGenerate(generator), nil, logger), nil)
+	injuryLLM := coaching.InjuryGenerate(generator)
+	injurySvc := injury.NewService(memoryStore, injury.NewLLMParser(injuryLLM, nil, logger), nil)
 	injuryHandler := injury.NewHandler(injurySvc, logger)
+	injuryAssistHandler := injury.NewAssistHandler(injury.NewAssistService(injuryLLM, logger), logger)
 
 	// Coaching engine (E5/E8): the only path that calls Claude. The API key is
 	// read from server-side config and never reaches the client.
@@ -119,6 +121,7 @@ func run(args []string) error {
 	dietHandler.Register(router, requireAuth)
 	readinessHandler.Register(router, requireAuth)
 	injuryHandler.Register(router, requireAuth)
+	injuryAssistHandler.Register(router, requireAuth)
 	coachingHandler.Register(router, requireAuth)
 
 	return serve(cfg, logger, router)

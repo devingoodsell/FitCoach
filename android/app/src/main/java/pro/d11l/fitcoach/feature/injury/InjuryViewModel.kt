@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pro.d11l.fitcoach.core.network.AssistQaDto
 import pro.d11l.fitcoach.core.network.InjuryDto
 import pro.d11l.fitcoach.data.InjuryRepository
 
@@ -28,6 +29,15 @@ data class InjuryUiState(
     val lowConfidenceFields: List<String> = emptyList(),
     val saving: Boolean = false,
     val error: String? = null,
+    // identification assist (E7-PR7) — guided Q&A that ends in the draft above
+    val assistVisible: Boolean = false,
+    val assistLoading: Boolean = false,
+    val assistDisclaimer: String = "",
+    val assistQuestion: String = "",
+    val assistChoices: List<String> = emptyList(),
+    val assistNote: String = "",
+    val assistInput: String = "",
+    val assistAnswers: List<AssistQaDto> = emptyList(),
 )
 
 class InjuryViewModel(private val repo: InjuryRepository) : ViewModel() {
@@ -86,6 +96,74 @@ class InjuryViewModel(private val repo: InjuryRepository) : ViewModel() {
                     }
                 }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun onAssistInput(v: String) = _state.update { it.copy(assistInput = v) }
+
+    /** Begin the identification assist: a guided Q&A that ends in a draft the user
+     *  reviews and saves through the normal flow (E7-S5/E7-PR7). */
+    fun startAssist() {
+        _state.update {
+            it.copy(
+                assistVisible = true, assistAnswers = emptyList(), assistQuestion = "",
+                assistChoices = emptyList(), assistNote = "", assistInput = "", error = null,
+            )
+        }
+        requestAssist(emptyList())
+    }
+
+    fun cancelAssist() = _state.update {
+        it.copy(assistVisible = false, assistInput = "", assistChoices = emptyList())
+    }
+
+    /** Answer with a suggested choice. */
+    fun pickAssistChoice(choice: String) = submitAssist(choice)
+
+    /** Answer the current question with the typed input. */
+    fun submitAssistInput() = submitAssist(_state.value.assistInput.trim())
+
+    private fun submitAssist(answer: String) {
+        val s = _state.value
+        if (answer.isEmpty()) return
+        val transcript = s.assistAnswers + AssistQaDto(question = s.assistQuestion, answer = answer)
+        _state.update { it.copy(assistAnswers = transcript, assistInput = "") }
+        requestAssist(transcript)
+    }
+
+    private fun requestAssist(transcript: List<AssistQaDto>) {
+        _state.update { it.copy(assistLoading = true, error = null) }
+        viewModelScope.launch {
+            repo.assist(transcript)
+                .onSuccess { r ->
+                    if (r.done && r.draft != null) {
+                        // Hand off to the existing review-before-save draft form.
+                        val inj = r.draft.injury
+                        _state.update {
+                            it.copy(
+                                assistVisible = false, assistLoading = false,
+                                draftVisible = true,
+                                region = inj.region,
+                                status = inj.status.ifEmpty { "active_flare" },
+                                severity = inj.severity.ifEmpty { "moderate" },
+                                aggravating = inj.aggravatingMovements.joinToString(", "),
+                                notes = inj.notes,
+                                lowConfidenceFields = r.draft.lowConfidenceFields,
+                            )
+                        }
+                    } else {
+                        _state.update {
+                            it.copy(
+                                assistLoading = false,
+                                assistDisclaimer = r.disclaimer,
+                                assistQuestion = r.question,
+                                assistChoices = r.choices,
+                                assistNote = r.note,
+                            )
+                        }
+                    }
+                }
+                .onFailure { e -> _state.update { it.copy(assistLoading = false, error = e.message) } }
         }
     }
 

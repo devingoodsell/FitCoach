@@ -257,6 +257,20 @@ class FakeApi : FitCoachApi {
     override suspend fun parseInjury(body: pro.d11l.fitcoach.core.network.ParseInjuryRequest): Response<InjuryDraftDto> =
         Response.success(parseDraft)
 
+    // Identification assist (E7-PR7): records the transcript and returns a
+    // configurable turn. Defaults to a "done" turn carrying the central disclaimer.
+    var assistResponse = pro.d11l.fitcoach.core.network.InjuryAssistResponseDto(
+        disclaimer = "server medical copy",
+        done = true,
+        draft = InjuryDraftDto(injury = pro.d11l.fitcoach.core.network.InjuryDto(region = "knee", status = "active_flare")),
+    )
+    var lastAssistAnswers: List<pro.d11l.fitcoach.core.network.AssistQaDto>? = null
+
+    override suspend fun assistInjury(body: pro.d11l.fitcoach.core.network.InjuryAssistRequest): Response<pro.d11l.fitcoach.core.network.InjuryAssistResponseDto> {
+        lastAssistAnswers = body.answers
+        return Response.success(assistResponse)
+    }
+
     // sessions
     var sessionResponse: Response<pro.d11l.fitcoach.core.network.SessionDto>? = null
     var replanResponse: pro.d11l.fitcoach.core.network.ReplanCheckDto =
