@@ -18,6 +18,7 @@ import pro.d11l.fitcoach.data.ReadinessRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
 import pro.d11l.fitcoach.data.RoomSessionCache
 import pro.d11l.fitcoach.data.SessionRepository
+import pro.d11l.fitcoach.data.WorkoutSyncManager
 import pro.d11l.fitcoach.healthconnect.HealthConnectSource
 
 /**
@@ -47,4 +48,7 @@ class AppContainer(context: Context) {
 
     val injuryRepository = InjuryRepository(api)
     val sessionRepository = SessionRepository(api, sessionCache)
+
+    // Offline write-queue for completed sessions (E12-PR2); flushed on reconnect.
+    val workoutSyncManager = WorkoutSyncManager(api, db.workoutOutboxDao(), NetworkModule.json)
 }

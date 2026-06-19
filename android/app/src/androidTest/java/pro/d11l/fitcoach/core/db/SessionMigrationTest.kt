@@ -59,6 +59,35 @@ class SessionMigrationTest {
         db.close()
     }
 
+    @Test
+    fun migrate2To3AddsWorkoutOutbox() {
+        helper.createDatabase(TEST_DB, 2).apply {
+            execSQL(
+                "INSERT INTO memory_sections (section, schemaVersion, dataJson, updatedAt) " +
+                    "VALUES ('profile', 1, '{}', null)",
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(
+            TEST_DB,
+            3,
+            true,
+            FitCoachDatabase.MIGRATION_2_3,
+        )
+
+        // Existing data preserved; the new write-queue table exists and is empty.
+        db.query("SELECT COUNT(*) FROM memory_sections").use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM workout_outbox").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        db.close()
+    }
+
     private companion object {
         const val TEST_DB = "migration-test"
     }

@@ -346,3 +346,49 @@ data class ReplanCheckDto(
     @SerialName("replan_needed") val replanNeeded: Boolean,
     val reasons: List<String> = emptyList(),
 )
+
+/** Workout-log DTOs (mirror POST /workouts). The request is idempotent on
+ *  [WorkoutLogRequest.clientSessionId]; the backend upserts so replays never
+ *  duplicate (E12-PR2). [data] is the as-performed session the client defines. */
+@Serializable
+data class WorkoutLogRequest(
+    @SerialName("client_session_id") val clientSessionId: String,
+    @SerialName("performed_at") val performedAt: String,
+    val data: WorkoutLogData,
+)
+
+@Serializable
+data class WorkoutLogData(
+    @SerialName("session_id") val sessionId: String,
+    @SerialName("schema_version") val schemaVersion: Int = 1,
+    /** "completed" or "partial" (some prescribed work skipped). */
+    val status: String,
+    val exercises: List<LoggedExerciseDto> = emptyList(),
+)
+
+@Serializable
+data class LoggedExerciseDto(
+    @SerialName("block_type") val blockType: String,
+    val name: String,
+    val movement: String,
+    val sets: List<LoggedSetDto> = emptyList(),
+)
+
+@Serializable
+data class LoggedSetDto(
+    val type: String,
+    @SerialName("reps_done") val repsDone: Int? = null,
+    @SerialName("load_kg") val loadKg: Double? = null,
+    @SerialName("rpe_actual") val rpeActual: Double? = null,
+    @SerialName("duration_done_sec") val durationDoneSec: Int? = null,
+    val skipped: Boolean = false,
+)
+
+/** Response from POST /workouts; `data` is echoed back but not needed by the client. */
+@Serializable
+data class WorkoutLogDto(
+    val id: String,
+    @SerialName("client_session_id") val clientSessionId: String,
+    @SerialName("schema_version") val schemaVersion: Int? = null,
+    @SerialName("performed_at") val performedAt: String? = null,
+)

@@ -33,7 +33,11 @@ import pro.d11l.fitcoach.core.network.PutSectionRequest
 import pro.d11l.fitcoach.core.network.RefreshRequest
 import pro.d11l.fitcoach.core.network.ResetRequest
 import pro.d11l.fitcoach.core.network.TokenPair
+import pro.d11l.fitcoach.core.db.WorkoutOutboxDao
+import pro.d11l.fitcoach.core.db.WorkoutOutboxEntity
 import pro.d11l.fitcoach.core.network.SessionDto
+import pro.d11l.fitcoach.core.network.WorkoutLogDto
+import pro.d11l.fitcoach.core.network.WorkoutLogRequest
 import pro.d11l.fitcoach.data.CachedSection
 import pro.d11l.fitcoach.data.CachedSession
 import pro.d11l.fitcoach.data.MemoryCache
@@ -83,6 +87,27 @@ class FakeSessionCache(private var cached: CachedSession? = null) : SessionCache
     override suspend fun clear() {
         clearCalled = true
         cached = null
+    }
+}
+
+/** In-memory WorkoutOutboxDao for tests (mirrors the Room DAO semantics). */
+class FakeWorkoutOutboxDao : WorkoutOutboxDao {
+    private val rows = linkedMapOf<String, WorkoutOutboxEntity>()
+
+    override suspend fun upsert(entry: WorkoutOutboxEntity) {
+        rows[entry.clientSessionId] = entry
+    }
+
+    override suspend fun pending(): List<WorkoutOutboxEntity> = rows.values.sortedBy { it.createdAt }
+    override suspend fun count(): Int = rows.size
+    override suspend fun delete(clientSessionId: String) {
+        rows.remove(clientSessionId)
+    }
+
+    override suspend fun markFailed(clientSessionId: String, error: String?) {
+        rows[clientSessionId]?.let {
+            rows[clientSessionId] = it.copy(attemptCount = it.attemptCount + 1, lastError = error)
+        }
     }
 }
 
@@ -317,6 +342,30 @@ class FakeApi : FitCoachApi {
     override suspend fun replanCheck(since: String): Response<pro.d11l.fitcoach.core.network.ReplanCheckDto> {
         lastReplanSince = since
         return Response.success(replanResponse)
+    }
+
+    // workouts: idempotent backend simulation keyed by client_session_id (upsert),
+    // mirroring memory.RecordWorkout. recordWorkoutPostCount tracks total posts so
+    // tests can distinguish replays (posts) from stored records (recordedWorkouts).
+    val recordedWorkouts = linkedMapOf<String, WorkoutLogRequest>()
+    var recordWorkoutPostCount = 0
+        private set
+    var failWorkoutFor: Set<String> = emptySet()
+    var recordWorkoutThrows = false
+
+    override suspend fun recordWorkout(body: WorkoutLogRequest): Response<WorkoutLogDto> {
+        recordWorkoutPostCount++
+        if (recordWorkoutThrows) throw java.io.IOException("offline")
+        if (body.clientSessionId in failWorkoutFor) return errorResponse(500)
+        recordedWorkouts[body.clientSessionId] = body // dedup on the idempotency key
+        return Response.success(
+            WorkoutLogDto(
+                id = "wl-${body.clientSessionId}",
+                clientSessionId = body.clientSessionId,
+                schemaVersion = 1,
+                performedAt = body.performedAt,
+            ),
+        )
     }
 }
 

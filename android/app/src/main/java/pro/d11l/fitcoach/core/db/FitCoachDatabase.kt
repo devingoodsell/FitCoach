@@ -13,13 +13,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SessionEntity::class,
         ExerciseEntity::class,
         SetEntity::class,
+        WorkoutOutboxEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class FitCoachDatabase : RoomDatabase() {
     abstract fun memorySectionDao(): MemorySectionDao
     abstract fun sessionDao(): SessionDao
+    abstract fun workoutOutboxDao(): WorkoutOutboxDao
 
     companion object {
         /**
@@ -98,9 +100,28 @@ abstract class FitCoachDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3 (E12-PR2): add the durable offline write-queue for completed sessions. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `workout_outbox` (
+                        `client_session_id` TEXT NOT NULL,
+                        `performed_at` TEXT NOT NULL,
+                        `data_json` TEXT NOT NULL,
+                        `created_at` TEXT NOT NULL,
+                        `attempt_count` INTEGER NOT NULL,
+                        `last_error` TEXT,
+                        PRIMARY KEY(`client_session_id`)
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
         fun create(context: Context): FitCoachDatabase =
             Room.databaseBuilder(context, FitCoachDatabase::class.java, "fitcoach.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
     }
 }
