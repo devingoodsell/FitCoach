@@ -10,9 +10,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import pro.d11l.fitcoach.data.LoggedSetState
 import pro.d11l.fitcoach.data.PlanSet
 import pro.d11l.fitcoach.data.SessionPlan
 import pro.d11l.fitcoach.data.SessionRepository
+import pro.d11l.fitcoach.data.WorkoutSyncManager
+import java.time.Instant
+
+/** Result of finishing a session (E6-PR5). */
+data class CompletionState(val saved: Boolean, val syncedNow: Boolean)
 
 data class SessionUiState(
     val loading: Boolean = false,
@@ -23,7 +29,9 @@ data class SessionUiState(
     val rest: RestState? = null,
     /** Increments each time a rest hits zero, driving the audible + haptic cue. */
     val restCueId: Int = 0,
+    val timer: TimerState? = null,
     val finished: Boolean = false,
+    val completion: CompletionState? = null,
 ) {
     val current: PlanSet? get() = plan?.steps?.getOrNull(stepIndex)
     val loggedCount: Int get() = plan?.steps?.count { it.logged.completed || it.logged.skipped } ?: 0
@@ -37,12 +45,17 @@ data class SessionUiState(
  * logged set (E6-PR3). All actions work with no connectivity; the only network
  * touch is the initial generate, which falls back to cache.
  */
-class SessionViewModel(private val repo: SessionRepository) : ViewModel() {
+class SessionViewModel(
+    private val repo: SessionRepository,
+    private val sync: WorkoutSyncManager,
+    private val now: () -> String = { Instant.now().toString() },
+) : ViewModel() {
 
     private val _state = MutableStateFlow(SessionUiState())
     val state: StateFlow<SessionUiState> = _state.asStateFlow()
 
     private var restJob: Job? = null
+    private var timerJob: Job? = null
 
     /** Tapping "Start workout": generate (or restore offline) and enter the player. */
     fun start() {
@@ -68,7 +81,9 @@ class SessionViewModel(private val repo: SessionRepository) : ViewModel() {
                 stepIndex = 0,
                 draft = SessionPlayer.draftFor(plan.steps.first().prescription),
                 rest = null,
+                timer = null,
                 finished = false,
+                completion = null,
             )
         }
     }
@@ -95,7 +110,8 @@ class SessionViewModel(private val repo: SessionRepository) : ViewModel() {
         recordAndAdvance(step, logged, restSec = 0)
     }
 
-    private fun recordAndAdvance(step: PlanSet, logged: pro.d11l.fitcoach.data.LoggedSetState, restSec: Int) {
+    private fun recordAndAdvance(step: PlanSet, logged: LoggedSetState, restSec: Int) {
+        timerJob?.cancel()
         _state.update { st ->
             val plan = st.plan ?: return@update st
             val steps = plan.steps.toMutableList()
@@ -106,11 +122,76 @@ class SessionViewModel(private val repo: SessionRepository) : ViewModel() {
                 plan = plan.copy(steps = steps),
                 stepIndex = if (done) st.stepIndex else nextIndex,
                 draft = if (done) st.draft else SessionPlayer.draftFor(steps[nextIndex].prescription),
+                timer = null,
                 finished = done,
             )
         }
         // Rest only when there is a next set to rest before; otherwise clear any panel.
         if (!_state.value.finished && restSec > 0) startRest(restSec) else dismissRest()
+    }
+
+    // --- timed-exercise timer (E6-PR4) -------------------------------------
+
+    /** Starts the count-up timer; elapsed seconds populate the duration draft live. */
+    fun startTimer() {
+        timerJob?.cancel()
+        _state.update { it.copy(timer = TimerController.start(), draft = it.draft.copy(durationSec = "0")) }
+        runTimerLoop()
+    }
+
+    fun stopTimer() {
+        timerJob?.cancel()
+        _state.update { it.timer?.let { t -> it.copy(timer = TimerController.stop(t)) } ?: it }
+    }
+
+    fun resumeTimer() {
+        val t = _state.value.timer ?: return
+        _state.update { it.copy(timer = TimerController.resume(t)) }
+        runTimerLoop()
+    }
+
+    private fun runTimerLoop() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (isActive) {
+                val timer = _state.value.timer ?: break
+                if (!timer.running) break
+                delay(1000)
+                val ticked = TimerController.tick(_state.value.timer ?: return@launch)
+                _state.update { it.copy(timer = ticked, draft = it.draft.copy(durationSec = ticked.elapsedSec.toString())) }
+            }
+        }
+    }
+
+    // --- completion (E6-PR5) ------------------------------------------------
+
+    /**
+     * Finishes the session: records every set (unlogged work as skipped), queues
+     * the result to the durable offline write-queue (E12-PR2), marks the cached
+     * session completed, and attempts a sync. Offline-safe — a failed sync leaves
+     * the log queued to flush on reconnect; the backend records it into Coach
+     * Memory idempotently (E3-PR5).
+     */
+    fun complete() {
+        val plan = _state.value.plan ?: return
+        if (_state.value.completion?.saved == true) return
+        restJob?.cancel()
+        timerJob?.cancel()
+        viewModelScope.launch {
+            val at = now()
+            val payload = CompletionAssembler.build(plan)
+            sync.enqueue(plan.clientSessionId, payload, at)
+            repo.markCompleted(plan.sessionId, at)
+            val result = sync.sync()
+            _state.update {
+                it.copy(
+                    rest = null,
+                    timer = null,
+                    finished = true,
+                    completion = CompletionState(saved = true, syncedNow = result.synced > 0),
+                )
+            }
+        }
     }
 
     // --- rest countdown (E6-PR3) -------------------------------------------
@@ -168,6 +249,7 @@ class SessionViewModel(private val repo: SessionRepository) : ViewModel() {
 
     override fun onCleared() {
         restJob?.cancel()
+        timerJob?.cancel()
         super.onCleared()
     }
 }

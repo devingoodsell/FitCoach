@@ -26,6 +26,7 @@ import pro.d11l.fitcoach.core.db.FitCoachDatabase
 import pro.d11l.fitcoach.core.network.NetworkModule
 import pro.d11l.fitcoach.data.RoomSessionCache
 import pro.d11l.fitcoach.data.SessionRepository
+import pro.d11l.fitcoach.data.WorkoutSyncManager
 
 /**
  * E12-PR1 — proves the in-session path runs end-to-end with no connectivity. With
@@ -78,7 +79,8 @@ class OfflineSessionTest {
         assertTrue("offline generate should succeed from cache", result.isSuccess)
         assertEquals(sample.id, result.getOrNull()?.id)
 
-        val vm = SessionViewModel(repo)
+        val sync = WorkoutSyncManager(api, db.workoutOutboxDao(), NetworkModule.json)
+        val vm = SessionViewModel(repo, sync)
         compose.setContent { MaterialTheme { SessionScreen(vm, onBack = {}) } }
 
         // Enter the player from cache with radios off.

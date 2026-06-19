@@ -57,7 +57,7 @@ fun SessionScreen(viewModel: SessionViewModel, onBack: () -> Unit) {
                 Button(onClick = viewModel::start, modifier = Modifier.fillMaxWidth()) {
                     Text("Start workout")
                 }
-            state.finished -> SessionCompleteCard(state.loggedCount, state.totalSteps)
+            state.finished -> SessionCompleteCard(state, viewModel)
             else -> PlayerContent(state, viewModel)
         }
 
@@ -77,6 +77,9 @@ private fun PlayerContent(state: SessionUiState, vm: SessionViewModel) {
     CurrentSetCard(step)
     state.rest?.let { RestPanel(it, vm) }
     SetInputs(state, step, vm)
+    OutlinedButton(onClick = vm::complete, modifier = Modifier.fillMaxWidth()) {
+        Text("Finish workout")
+    }
 }
 
 @Composable
@@ -102,6 +105,7 @@ private fun SetInputs(state: SessionUiState, step: PlanSet, vm: SessionViewModel
     val isTimed = step.prescription.type == "time"
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (isTimed) {
+            TimedExerciseControls(state, vm)
             OutlinedTextField(
                 value = state.draft.durationSec,
                 onValueChange = vm::updateDuration,
@@ -156,11 +160,40 @@ private fun RestPanel(rest: RestState, vm: SessionViewModel) {
 }
 
 @Composable
-private fun SessionCompleteCard(logged: Int, total: Int) {
+private fun TimedExerciseControls(state: SessionUiState, vm: SessionViewModel) {
+    val timer = state.timer
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Timer ${formatClock(timer?.elapsedSec ?: 0)}", style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when {
+                    timer == null -> TextButton(onClick = vm::startTimer) { Text("Start") }
+                    timer.running -> TextButton(onClick = vm::stopTimer) { Text("Stop") }
+                    else -> {
+                        TextButton(onClick = vm::resumeTimer) { Text("Resume") }
+                        TextButton(onClick = vm::startTimer) { Text("Reset") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionCompleteCard(state: SessionUiState, vm: SessionViewModel) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Session complete", style = MaterialTheme.typography.titleLarge)
-            Text("Logged $logged of $total sets.", style = MaterialTheme.typography.bodyMedium)
+            Text("Logged ${state.loggedCount} of ${state.totalSteps} sets.", style = MaterialTheme.typography.bodyMedium)
+            val completion = state.completion
+            if (completion == null) {
+                Button(onClick = vm::complete, modifier = Modifier.fillMaxWidth()) { Text("Save workout") }
+            } else {
+                Text(
+                    if (completion.syncedNow) "Saved and synced." else "Saved — will sync when you're back online.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
     }
 }

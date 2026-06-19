@@ -55,6 +55,10 @@ class SessionRepository(
     /** Persists logged actuals for one set, offline (E6-PR2). */
     suspend fun logSet(setId: Long, logged: LoggedSetState) = cache.logSet(setId, logged)
 
+    /** Marks the cached session completed (E6-PR5). */
+    suspend fun markCompleted(sessionId: String, completedAt: String) =
+        cache.markCompleted(sessionId, completedAt)
+
     /** Asks whether a session cached at [since] (RFC 3339) should be regenerated. */
     suspend fun replanCheck(since: String): Result<ReplanCheckDto> = runCatching {
         val resp = api.replanCheck(since)

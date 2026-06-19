@@ -38,7 +38,7 @@ class AppViewModelFactory(private val container: AppContainer) : ViewModelProvid
         modelClass.isAssignableFrom(InjuryViewModel::class.java) ->
             InjuryViewModel(container.injuryRepository) as T
         modelClass.isAssignableFrom(SessionViewModel::class.java) ->
-            SessionViewModel(container.sessionRepository) as T
+            SessionViewModel(container.sessionRepository, container.workoutSyncManager) as T
         modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
             SettingsViewModel(container.authRepository) as T
         modelClass.isAssignableFrom(EditProfileViewModel::class.java) ->
