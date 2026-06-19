@@ -21,11 +21,21 @@ import pro.d11l.fitcoach.core.designsystem.LocalDisclaimers
 import pro.d11l.fitcoach.core.designsystem.MedicalDisclaimer
 
 @Composable
-fun ConsentScreen(viewModel: ConsentViewModel, onDecided: (manualMode: Boolean) -> Unit) {
+fun ConsentScreen(
+    viewModel: ConsentViewModel,
+    onDecided: (manualMode: Boolean) -> Unit,
+    requestHealthPermissions: () -> Unit = {},
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.decided) {
-        if (state.decided) onDecided(state.manualMode)
+        if (state.decided) {
+            // The user opted into health data: ask Health Connect for the read
+            // permissions now. Denial degrades to manual mode on the Readiness screen,
+            // so we don't gate navigation on the result.
+            if (!state.manualMode) requestHealthPermissions()
+            onDecided(state.manualMode)
+        }
     }
 
     Column(

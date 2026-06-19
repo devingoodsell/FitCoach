@@ -46,6 +46,7 @@ import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
 import pro.d11l.fitcoach.feature.session.SessionScreen
 import pro.d11l.fitcoach.feature.session.SessionViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsRoot
+import pro.d11l.fitcoach.healthconnect.rememberHealthConnectPermissionLauncher
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,7 +98,12 @@ private fun AppRoot(
             }
             Step.Consent -> {
                 val vm: ConsentViewModel = viewModel(key = "consent-$epoch", factory = factory)
-                ConsentScreen(vm) { step = Step.Onboarding }
+                val requestHealthPermissions = rememberHealthConnectPermissionLauncher { /* granted set; Readiness re-checks on ingest */ }
+                ConsentScreen(
+                    viewModel = vm,
+                    onDecided = { step = Step.Onboarding },
+                    requestHealthPermissions = requestHealthPermissions,
+                )
             }
             Step.Onboarding -> {
                 val vm: OnboardingViewModel = viewModel(key = "onboarding-$epoch", factory = factory)

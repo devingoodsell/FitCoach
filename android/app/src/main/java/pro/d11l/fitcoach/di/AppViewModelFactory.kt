@@ -34,7 +34,7 @@ class AppViewModelFactory(private val container: AppContainer) : ViewModelProvid
         modelClass.isAssignableFrom(DietViewModel::class.java) ->
             DietViewModel(container.dietRepository) as T
         modelClass.isAssignableFrom(ReadinessViewModel::class.java) ->
-            ReadinessViewModel(container.readinessRepository) as T
+            ReadinessViewModel(container.readinessRepository, container.healthSignalsRepository) as T
         modelClass.isAssignableFrom(InjuryViewModel::class.java) ->
             InjuryViewModel(container.injuryRepository) as T
         modelClass.isAssignableFrom(SessionViewModel::class.java) ->

@@ -14,6 +14,7 @@ import pro.d11l.fitcoach.core.network.DietPrefsDto
 import pro.d11l.fitcoach.core.network.DietTargetsDto
 import pro.d11l.fitcoach.core.network.FitCoachApi
 import pro.d11l.fitcoach.core.network.GoalWeightsDto
+import pro.d11l.fitcoach.core.network.HealthSignalDto
 import pro.d11l.fitcoach.core.network.HealthSignalsRequest
 import pro.d11l.fitcoach.core.network.InjuriesDocDto
 import pro.d11l.fitcoach.core.network.InjuryDraftDto
@@ -48,7 +49,10 @@ import pro.d11l.fitcoach.data.SessionCache
 import pro.d11l.fitcoach.data.SessionPlan
 import pro.d11l.fitcoach.data.toCacheGraph
 import pro.d11l.fitcoach.data.toSessionPlan
+import pro.d11l.fitcoach.healthconnect.RecoverySignalSource
+import pro.d11l.fitcoach.healthconnect.SignalSourceStatus
 import retrofit2.Response
+import java.time.Instant
 
 /** In-memory TokenStorage for tests. */
 class InMemoryTokenStorage(private var tokens: Tokens? = null) : TokenStorage {
@@ -132,6 +136,28 @@ class FakeWorkoutOutboxDao : WorkoutOutboxDao {
         rows[clientSessionId]?.let {
             rows[clientSessionId] = it.copy(attemptCount = it.attemptCount + 1, lastError = error)
         }
+    }
+}
+
+/**
+ * Configurable fake of the on-device recovery-signal provider (Health Connect),
+ * driving each [pro.d11l.fitcoach.data.IngestResult] branch. Records whether it was read.
+ */
+class FakeRecoverySignalSource(
+    var statusResult: SignalSourceStatus = SignalSourceStatus.AVAILABLE,
+    var permitted: Boolean = true,
+    var samples: List<HealthSignalDto> = emptyList(),
+    var throwOnRead: Boolean = false,
+) : RecoverySignalSource {
+    var readCalled = false
+        private set
+
+    override suspend fun status(): SignalSourceStatus = statusResult
+    override suspend fun hasAllPermissions(): Boolean = permitted
+    override suspend fun read(start: Instant, end: Instant): List<HealthSignalDto> {
+        readCalled = true
+        if (throwOnRead) error("boom")
+        return samples
     }
 }
 
