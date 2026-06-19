@@ -198,6 +198,27 @@ data class PostWorkoutNoteDto(
     val disclaimer: String = "",
 )
 
+/** A single raw recovery sample uploaded to the backend (mirrors HealthSignal in
+ *  the contract). The backend is idempotent on (kind, day) and computes its own
+ *  readiness from these; it never stores a vendor score. */
+@Serializable
+data class HealthSignalDto(
+    val kind: String,
+    val value: Double,
+    val day: String,
+)
+
+/** Body for POST /health/signals — a batch of raw samples. */
+@Serializable
+data class HealthSignalsRequest(val samples: List<HealthSignalDto> = emptyList())
+
+/** Recognized [HealthSignalDto.kind] values (the contract's enum). */
+object HealthSignalKinds {
+    const val HRV_MS = "hrv_ms"
+    const val RHR_BPM = "rhr_bpm"
+    const val SLEEP_MINUTES = "sleep_minutes"
+}
+
 /** Readiness DTO (mirrors GET /readiness in the contract). */
 @Serializable
 data class ReadinessDto(

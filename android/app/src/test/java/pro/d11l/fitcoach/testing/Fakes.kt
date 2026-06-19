@@ -14,6 +14,7 @@ import pro.d11l.fitcoach.core.network.DietPrefsDto
 import pro.d11l.fitcoach.core.network.DietTargetsDto
 import pro.d11l.fitcoach.core.network.FitCoachApi
 import pro.d11l.fitcoach.core.network.GoalWeightsDto
+import pro.d11l.fitcoach.core.network.HealthSignalsRequest
 import pro.d11l.fitcoach.core.network.InjuriesDocDto
 import pro.d11l.fitcoach.core.network.InjuryDraftDto
 import pro.d11l.fitcoach.core.network.InjuryDto
@@ -97,6 +98,10 @@ class FakeApi : FitCoachApi {
     // readiness
     var readiness = ReadinessDto()
     var readinessError = false
+
+    // health signals upload
+    var lastSignals: HealthSignalsRequest? = null
+    var uploadSignalsError = false
 
     // injuries
     var injuriesDoc = InjuriesDocDto()
@@ -230,6 +235,11 @@ class FakeApi : FitCoachApi {
 
     override suspend fun getPostWorkoutNote(intensity: String): Response<PostWorkoutNoteDto> =
         Response.success(postWorkoutNote.copy(note = "$intensity: ${postWorkoutNote.note}"))
+
+    override suspend fun uploadHealthSignals(body: HealthSignalsRequest): Response<Unit> {
+        lastSignals = body
+        return if (uploadSignalsError) errorResponse(500) else Response.success(Unit)
+    }
 
     override suspend fun getReadiness(): Response<ReadinessDto> =
         if (readinessError) errorResponse(500) else Response.success(readiness)

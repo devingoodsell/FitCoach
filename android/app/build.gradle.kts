@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // Health Connect: read recovery signals (sleep, RHR, HRV) on device (E4-PR5).
+    implementation(libs.androidx.health.connect)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }
