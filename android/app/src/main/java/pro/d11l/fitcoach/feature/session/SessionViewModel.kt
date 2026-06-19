@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import pro.d11l.fitcoach.core.network.SetPrescriptionDto
 import pro.d11l.fitcoach.data.LoggedSetState
 import pro.d11l.fitcoach.data.PlanSet
 import pro.d11l.fitcoach.data.SessionPlan
@@ -121,7 +122,7 @@ class SessionViewModel(
             st.copy(
                 plan = plan.copy(steps = steps),
                 stepIndex = if (done) st.stepIndex else nextIndex,
-                draft = if (done) st.draft else SessionPlayer.draftFor(steps[nextIndex].prescription),
+                draft = if (done) st.draft else SessionPlayer.draftFor(autoregulatedNext(step, logged, steps[nextIndex])),
                 timer = null,
                 finished = done,
             )
@@ -129,6 +130,18 @@ class SessionViewModel(
         // Rest only when there is a next set to rest before; otherwise clear any panel.
         if (!_state.value.finished && restSec > 0) startRest(restSec) else dismissRest()
     }
+
+    /**
+     * On-device autoregulation (E5-PR6): when the next set is in the same exercise,
+     * nudge its load from the just-logged performance. Across exercise boundaries
+     * the prescription stands as planned.
+     */
+    private fun autoregulatedNext(prev: PlanSet, logged: LoggedSetState, next: PlanSet): SetPrescriptionDto =
+        if (next.exerciseKey == prev.exerciseKey) {
+            Autoregulator.adjust(prev.prescription, logged, next.prescription)
+        } else {
+            next.prescription
+        }
 
     // --- timed-exercise timer (E6-PR4) -------------------------------------
 

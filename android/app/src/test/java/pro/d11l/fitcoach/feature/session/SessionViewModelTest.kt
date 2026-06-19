@@ -170,6 +170,19 @@ class SessionViewModelTest {
     }
 
     @Test
+    fun `over-performing autoregulates the next set's load within the same exercise`() = runTest {
+        val vm = fixtures().vm
+        vm.start(); advanceUntilIdle()
+        vm.logCurrentSet(); runCurrent() // warm-up (different exercise) -> main set 1 seeded plain (20kg)
+        assertEquals("20", vm.state.value.draft.loadKg)
+
+        // Main set 1: prescribed 8 reps @ 20kg, did 10 -> next (set 2, 24kg) load +6% = 25.5
+        vm.updateReps("10")
+        vm.logCurrentSet(); runCurrent()
+        assertEquals("25.5", vm.state.value.draft.loadKg)
+    }
+
+    @Test
     fun `finishing a full session syncs a completed log`() = runTest {
         val fx = fixtures()
         fx.vm.start(); advanceUntilIdle()
