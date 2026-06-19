@@ -43,10 +43,10 @@ import pro.d11l.fitcoach.feature.onboarding.OnboardingScreen
 import pro.d11l.fitcoach.feature.onboarding.OnboardingViewModel
 import pro.d11l.fitcoach.feature.readiness.ReadinessScreen
 import pro.d11l.fitcoach.feature.readiness.ReadinessViewModel
-import pro.d11l.fitcoach.healthconnect.rememberHealthConnectPermissionLauncher
 import pro.d11l.fitcoach.feature.session.SessionScreen
 import pro.d11l.fitcoach.feature.session.SessionViewModel
 import pro.d11l.fitcoach.feature.settings.SettingsRoot
+import pro.d11l.fitcoach.healthconnect.rememberHealthConnectPermissionLauncher
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
