@@ -9,6 +9,7 @@ import pro.d11l.fitcoach.data.AuthRepository
 import pro.d11l.fitcoach.data.ConsentRepository
 import pro.d11l.fitcoach.data.DietRepository
 import pro.d11l.fitcoach.data.DisclaimerRepository
+import pro.d11l.fitcoach.data.HealthSignalsRepository
 import pro.d11l.fitcoach.data.InjuryRepository
 import pro.d11l.fitcoach.data.LocationRepository
 import pro.d11l.fitcoach.data.MemoryRepository
@@ -16,6 +17,7 @@ import pro.d11l.fitcoach.data.OnboardingRepository
 import pro.d11l.fitcoach.data.ReadinessRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
 import pro.d11l.fitcoach.data.SessionRepository
+import pro.d11l.fitcoach.healthconnect.HealthConnectSource
 
 /**
  * Manual dependency container (lightweight DI). Holds singletons for the process
@@ -35,6 +37,12 @@ class AppContainer(context: Context) {
     val locationRepository = LocationRepository(api)
     val dietRepository = DietRepository(api)
     val readinessRepository = ReadinessRepository(api)
+
+    // Health Connect ingestion (E4-PR5): reads recovery signals on device and
+    // uploads them; the backend computes readiness from them. Gated by E1 consent.
+    private val recoverySignalSource = HealthConnectSource(context.applicationContext)
+    val healthSignalsRepository = HealthSignalsRepository(recoverySignalSource, api, consentRepository)
+
     val injuryRepository = InjuryRepository(api)
     val sessionRepository = SessionRepository(api)
 }

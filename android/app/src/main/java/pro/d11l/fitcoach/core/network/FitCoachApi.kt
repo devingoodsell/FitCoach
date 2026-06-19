@@ -95,6 +95,11 @@ interface FitCoachApi {
     @GET("diet/post-workout-note")
     suspend fun getPostWorkoutNote(@Query("intensity") intensity: String): Response<PostWorkoutNoteDto>
 
+    // Upload raw recovery samples read from Health Connect (E4-PR5). Gated by
+    // health-data consent server-side (403 without it); 204 on success.
+    @POST("health/signals")
+    suspend fun uploadHealthSignals(@Body body: HealthSignalsRequest): Response<Unit>
+
     @GET("readiness")
     suspend fun getReadiness(): Response<ReadinessDto>
 
