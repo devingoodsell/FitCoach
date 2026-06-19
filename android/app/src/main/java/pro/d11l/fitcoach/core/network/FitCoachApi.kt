@@ -113,6 +113,11 @@ interface FitCoachApi {
     @POST("injuries/parse")
     suspend fun parseInjury(@Body body: ParseInjuryRequest): Response<InjuryDraftDto>
 
+    // Identification assist (E7-PR7): stateless guided Q&A; the server makes the
+    // Claude call. The client replays the transcript each turn.
+    @POST("injuries/assist")
+    suspend fun assistInjury(@Body body: InjuryAssistRequest): Response<InjuryAssistResponseDto>
+
     // Session generation is the single server-side Claude call; the client never
     // calls Anthropic directly.
     @POST("sessions/generate")

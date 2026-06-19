@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import pro.d11l.fitcoach.core.network.InjuryAssistResponseDto
 import pro.d11l.fitcoach.core.network.InjuryDraftDto
 import pro.d11l.fitcoach.core.network.InjuryDto
 import pro.d11l.fitcoach.data.InjuryRepository
@@ -96,5 +97,57 @@ class InjuryViewModelTest {
         vm.delete(inj.id)
         advanceUntilIdle()
         assertTrue(vm.state.value.injuries.isEmpty())
+    }
+
+    @Test
+    fun `assist surfaces the disclaimer and question while gathering info`() = runTest {
+        val api = FakeApi().apply {
+            assistResponse = InjuryAssistResponseDto(
+                disclaimer = "This is not a diagnosis; consult a clinician.",
+                done = false,
+                question = "Where do you feel it?",
+                choices = listOf("knee", "shoulder"),
+            )
+        }
+        val vm = vm(api)
+        advanceUntilIdle()
+        vm.startAssist()
+        advanceUntilIdle()
+
+        val s = vm.state.value
+        assertTrue(s.assistVisible)
+        // The "not a diagnosis" framing is present throughout the assist flow (E13).
+        assertEquals("This is not a diagnosis; consult a clinician.", s.assistDisclaimer)
+        assertEquals("Where do you feel it?", s.assistQuestion)
+        assertEquals(listOf("knee", "shoulder"), s.assistChoices)
+        assertFalse(s.draftVisible)
+    }
+
+    @Test
+    fun `assist completion hands off to a confirmable review-before-save draft`() = runTest {
+        val api = FakeApi().apply {
+            assistResponse = InjuryAssistResponseDto(
+                disclaimer = "This is not a diagnosis; consult a clinician.",
+                done = true,
+                draft = InjuryDraftDto(
+                    injury = InjuryDto(region = "lower_back", status = "managed", severity = "mild"),
+                ),
+            )
+        }
+        val vm = vm(api)
+        advanceUntilIdle()
+        vm.startAssist()
+        advanceUntilIdle()
+
+        // Reuses the existing review-before-save draft form — no separate save path.
+        val s = vm.state.value
+        assertFalse(s.assistVisible)
+        assertTrue(s.draftVisible)
+        assertEquals("lower_back", s.region)
+
+        vm.saveDraft()
+        advanceUntilIdle()
+        assertEquals("lower_back", api.lastAddedInjury?.region)
+        assertFalse(vm.state.value.draftVisible)
     }
 }

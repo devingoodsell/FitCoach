@@ -235,6 +235,24 @@ data class InjuryDraftDto(
 @Serializable
 data class ParseInjuryRequest(val text: String)
 
+/** Identification-assist DTOs (mirror /injuries/assist in the contract, E7-PR7). */
+
+@Serializable
+data class AssistQaDto(val question: String, val answer: String)
+
+@Serializable
+data class InjuryAssistRequest(val answers: List<AssistQaDto> = emptyList())
+
+@Serializable
+data class InjuryAssistResponseDto(
+    val disclaimer: String = "",
+    val done: Boolean = false,
+    val question: String = "",
+    val choices: List<String> = emptyList(),
+    val note: String = "",
+    val draft: InjuryDraftDto? = null,
+)
+
 /** Session DTOs (mirror the Session schema in the contract — the generated
  *  workout the client renders, caches offline, and autoregulates against). */
 

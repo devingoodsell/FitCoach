@@ -692,8 +692,9 @@ paths:
       summary: Parse a freeform description into a reviewable draft (E7-S1)
       description: >
         Returns a best-effort structured draft for the user to review/correct
-        before saving; low_confidence_fields names uncertain slots. Heuristic
-        stand-in until the LLM-backed parser lands in E5.
+        before saving; low_confidence_fields names uncertain slots. Backed by a
+        server-side Claude call (E7-PR2); falls back to a deterministic heuristic
+        when the model is unavailable. The API key never leaves the backend.
       requestBody:
         required: true
         content:
@@ -710,6 +711,32 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/InjuryDraft" }
         "400": { description: Text required }
+
+  /injuries/assist:
+    post:
+      tags: [injuries]
+      summary: Guided identification assist (E7-S5/E7-PR7)
+      description: >
+        Stateless guided Q&A that helps a user characterize an unknown issue. The
+        client replays the full transcript each turn; the server makes one
+        server-side Claude call and returns either the next question or, when it
+        has enough, a structured draft. Every response carries the central E13
+        "not a diagnosis, consult a clinician" disclaimer. The final draft feeds
+        the SAME review-before-save injury entry (POST /injuries) the user
+        confirms — nothing is persisted by this endpoint. The API key never
+        leaves the backend.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InjuryAssistRequest" }
+      responses:
+        "200":
+          description: The next turn (a question) or a final reviewable draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InjuryAssistResponse" }
+        "400": { description: Malformed request body }
 
   /sessions/generate:
     post:
@@ -1035,6 +1062,45 @@ components:
       properties:
         injury: { $ref: "#/components/schemas/Injury" }
         low_confidence_fields: { type: array, items: { type: string } }
+
+    InjuryAssistRequest:
+      type: object
+      description: The guided-assist transcript so far (the flow is stateless).
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required: [question, answer]
+            properties:
+              question: { type: string }
+              answer: { type: string }
+
+    InjuryAssistResponse:
+      type: object
+      required: [disclaimer, done]
+      properties:
+        disclaimer:
+          type: string
+          description: Central E13 medical disclaimer; present on every turn.
+        done:
+          type: boolean
+          description: True when the assist has produced a reviewable draft.
+        question:
+          type: string
+          description: The next question to ask (omitted when done).
+        choices:
+          type: array
+          items: { type: string }
+          description: Optional suggested answers for the question.
+        note:
+          type: string
+          description: Optional brief, non-diagnostic note from the assistant.
+        draft:
+          allOf:
+            - $ref: "#/components/schemas/InjuryDraft"
+          description: >
+            Present when done; feeds the existing review-before-save injury entry.
 
     Session:
       type: object

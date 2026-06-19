@@ -45,20 +45,25 @@ fun InjuryScreen(viewModel: InjuryViewModel, onBack: () -> Unit) {
             Text("No injuries recorded.", style = MaterialTheme.typography.bodyMedium)
         }
 
-        if (!state.draftVisible) {
-            Text("Describe something that's bothering you", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = state.freeText,
-                onValueChange = viewModel::onFreeText,
-                label = { Text("e.g. my left knee hurts when I squat") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(onClick = viewModel::parse, modifier = Modifier.weight(1f)) { Text("Parse") }
-                OutlinedButton(onClick = viewModel::startManual, modifier = Modifier.weight(1f)) { Text("Add manually") }
+        when {
+            state.assistVisible -> AssistPanel(state, viewModel)
+            state.draftVisible -> DraftForm(state, viewModel)
+            else -> {
+                Text("Describe something that's bothering you", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = state.freeText,
+                    onValueChange = viewModel::onFreeText,
+                    label = { Text("e.g. my left knee hurts when I squat") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = viewModel::parse, modifier = Modifier.weight(1f)) { Text("Parse") }
+                    OutlinedButton(onClick = viewModel::startManual, modifier = Modifier.weight(1f)) { Text("Add manually") }
+                }
+                OutlinedButton(onClick = viewModel::startAssist, modifier = Modifier.fillMaxWidth()) {
+                    Text("Not sure? Help me figure it out")
+                }
             }
-        } else {
-            DraftForm(state, viewModel)
         }
 
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
@@ -88,6 +93,51 @@ private fun DraftForm(state: InjuryUiState, vm: InjuryViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(onClick = vm::cancelDraft, modifier = Modifier.weight(1f)) { Text("Cancel") }
         Button(onClick = vm::saveDraft, enabled = !state.saving, modifier = Modifier.weight(1f)) { Text("Save") }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AssistPanel(state: InjuryUiState, vm: InjuryViewModel) {
+    Text("Let's narrow it down", style = MaterialTheme.typography.titleMedium)
+    // The "not a diagnosis, consult a clinician" framing is present throughout the
+    // assist flow (E13-S1): the screen-level banner plus the server-sent copy.
+    MedicalDisclaimer(modifier = Modifier.fillMaxWidth())
+    if (state.assistDisclaimer.isNotEmpty()) {
+        Text(state.assistDisclaimer, style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (state.assistNote.isNotEmpty()) {
+        Text(state.assistNote, style = MaterialTheme.typography.bodyMedium)
+    }
+    if (state.assistQuestion.isNotEmpty()) {
+        Text(state.assistQuestion, style = MaterialTheme.typography.titleSmall)
+    }
+
+    if (state.assistChoices.isNotEmpty()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            state.assistChoices.forEach { choice ->
+                OutlinedButton(
+                    onClick = { vm.pickAssistChoice(choice) },
+                    enabled = !state.assistLoading,
+                ) { Text(choice) }
+            }
+        }
+    }
+
+    OutlinedTextField(
+        value = state.assistInput,
+        onValueChange = vm::onAssistInput,
+        label = { Text("Your answer") },
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = vm::cancelAssist, modifier = Modifier.weight(1f)) { Text("Cancel") }
+        Button(
+            onClick = vm::submitAssistInput,
+            enabled = !state.assistLoading && state.assistInput.isNotBlank(),
+            modifier = Modifier.weight(1f),
+        ) { Text(if (state.assistLoading) "…" else "Send") }
     }
 }
 
