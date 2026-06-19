@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Haptic rest-timer cue at zero (E6-PR3). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Health Connect read permissions for recovery signals (E4-PR5). -->
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />

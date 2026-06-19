@@ -33,6 +33,8 @@ import pro.d11l.fitcoach.core.network.PutSectionRequest
 import pro.d11l.fitcoach.core.network.RefreshRequest
 import pro.d11l.fitcoach.core.network.ResetRequest
 import pro.d11l.fitcoach.core.network.TokenPair
+import kotlinx.serialization.json.Json
+import pro.d11l.fitcoach.core.db.SessionWithExercises
 import pro.d11l.fitcoach.core.db.WorkoutOutboxDao
 import pro.d11l.fitcoach.core.db.WorkoutOutboxEntity
 import pro.d11l.fitcoach.core.network.SessionDto
@@ -40,8 +42,12 @@ import pro.d11l.fitcoach.core.network.WorkoutLogDto
 import pro.d11l.fitcoach.core.network.WorkoutLogRequest
 import pro.d11l.fitcoach.data.CachedSection
 import pro.d11l.fitcoach.data.CachedSession
+import pro.d11l.fitcoach.data.LoggedSetState
 import pro.d11l.fitcoach.data.MemoryCache
 import pro.d11l.fitcoach.data.SessionCache
+import pro.d11l.fitcoach.data.SessionPlan
+import pro.d11l.fitcoach.data.toCacheGraph
+import pro.d11l.fitcoach.data.toSessionPlan
 import retrofit2.Response
 
 /** In-memory TokenStorage for tests. */
@@ -72,9 +78,13 @@ class FakeMemoryCache(private var sections: List<CachedSection> = emptyList()) :
     }
 }
 
-/** In-memory SessionCache for tests; records the last saved session. */
+/** In-memory SessionCache for tests; records the last saved session and set logs. */
 class FakeSessionCache(private var cached: CachedSession? = null) : SessionCache {
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     var clearCalled = false
+        private set
+    val loggedSets = mutableListOf<Pair<Long, LoggedSetState>>()
+    var completedAt: String? = null
         private set
 
     override suspend fun save(session: SessionDto, clientSessionId: String): CachedSession {
@@ -84,6 +94,20 @@ class FakeSessionCache(private var cached: CachedSession? = null) : SessionCache
     }
 
     override suspend fun latest(): CachedSession? = cached
+
+    override suspend fun loadPlan(): SessionPlan? = cached?.let {
+        val (entity, exercises) = it.session.toCacheGraph(it.clientSessionId, json)
+        SessionWithExercises(entity, exercises).toSessionPlan(json)
+    }
+
+    override suspend fun logSet(setId: Long, logged: LoggedSetState) {
+        loggedSets.add(setId to logged)
+    }
+
+    override suspend fun markCompleted(sessionId: String, completedAt: String) {
+        this.completedAt = completedAt
+    }
+
     override suspend fun clear() {
         clearCalled = true
         cached = null

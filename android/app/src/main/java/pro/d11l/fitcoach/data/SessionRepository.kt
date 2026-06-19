@@ -49,6 +49,12 @@ class SessionRepository(
     /** The cached session, if one was generated earlier — the offline read path (E12-S1). */
     suspend fun cached(): CachedSession? = cache.latest()
 
+    /** The cached session flattened into ordered player steps (E6), offline. */
+    suspend fun plan(): SessionPlan? = cache.loadPlan()
+
+    /** Persists logged actuals for one set, offline (E6-PR2). */
+    suspend fun logSet(setId: Long, logged: LoggedSetState) = cache.logSet(setId, logged)
+
     /** Asks whether a session cached at [since] (RFC 3339) should be regenerated. */
     suspend fun replanCheck(since: String): Result<ReplanCheckDto> = runCatching {
         val resp = api.replanCheck(since)

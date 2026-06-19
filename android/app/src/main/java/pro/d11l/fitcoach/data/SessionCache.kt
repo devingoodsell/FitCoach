@@ -42,6 +42,15 @@ interface SessionCache {
     /** The most recently generated session, or null if none is cached. */
     suspend fun latest(): CachedSession?
 
+    /** The cached session flattened into ordered player steps (E6); null if none cached. */
+    suspend fun loadPlan(): SessionPlan?
+
+    /** Persists logged actuals for one set, offline (E6-PR2). */
+    suspend fun logSet(setId: Long, logged: LoggedSetState)
+
+    /** Marks the cached session completed (E6-PR5). */
+    suspend fun markCompleted(sessionId: String, completedAt: String)
+
     suspend fun clear()
 }
 
@@ -58,6 +67,24 @@ class RoomSessionCache(
     }
 
     override suspend fun latest(): CachedSession? = dao.latest()?.toCachedSession(json)
+
+    override suspend fun loadPlan(): SessionPlan? = dao.latest()?.toSessionPlan(json)
+
+    override suspend fun logSet(setId: Long, logged: LoggedSetState) {
+        dao.updateSetLog(
+            setId = setId,
+            repsDone = logged.repsDone,
+            loadKgDone = logged.loadKgDone,
+            rpeActual = logged.rpeActual,
+            durationDoneSec = logged.durationDoneSec,
+            skipped = logged.skipped,
+            completed = logged.completed,
+        )
+    }
+
+    override suspend fun markCompleted(sessionId: String, completedAt: String) {
+        dao.updateSessionStatus(sessionId, SessionEntity.STATUS_COMPLETED, completedAt)
+    }
 
     override suspend fun clear() = dao.clearSessions()
 }

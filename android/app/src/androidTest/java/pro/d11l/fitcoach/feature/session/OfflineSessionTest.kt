@@ -81,16 +81,20 @@ class OfflineSessionTest {
         val vm = SessionViewModel(repo)
         compose.setContent { MaterialTheme { SessionScreen(vm, onBack = {}) } }
 
+        // Enter the player from cache with radios off.
         compose.onNodeWithText("Start workout").performClick()
+        compose.waitUntil(timeoutMillis = 15_000) {
+            compose.onAllNodesWithText("Rower easy spin").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Rower easy spin").assertIsDisplayed()
+        compose.onNodeWithText("Log set").assertIsDisplayed()
+
+        // Logging a set (offline write) advances to the next exercise.
+        compose.onNodeWithText("Log set").performClick()
         compose.waitUntil(timeoutMillis = 15_000) {
             compose.onAllNodesWithText("Goblet box squat").fetchSemanticsNodes().isNotEmpty()
         }
-
-        // The full session renders from cache with radios off.
         compose.onNodeWithText("Goblet box squat").assertIsDisplayed()
-        compose.onNodeWithText("Main work").assertIsDisplayed()
-        compose.onNodeWithText("Set 1: 8 reps · 20 kg · RPE 6 · rest 120s").assertIsDisplayed()
-        compose.onNodeWithText("Healthy-aging block").assertIsDisplayed()
     }
 
     @Test
