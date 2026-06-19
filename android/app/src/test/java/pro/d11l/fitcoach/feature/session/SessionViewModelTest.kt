@@ -11,6 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import pro.d11l.fitcoach.data.SessionRepository
 import pro.d11l.fitcoach.testing.FakeApi
+import pro.d11l.fitcoach.testing.FakeSessionCache
 import pro.d11l.fitcoach.testing.MainDispatcherRule
 import pro.d11l.fitcoach.testing.errorResponse
 import retrofit2.Response
@@ -21,7 +22,7 @@ class SessionViewModelTest {
     @get:Rule
     val mainDispatcher = MainDispatcherRule()
 
-    private fun vm(api: FakeApi) = SessionViewModel(SessionRepository(api))
+    private fun vm(api: FakeApi) = SessionViewModel(SessionRepository(api, FakeSessionCache()))
 
     @Test
     fun `start loads a generated session`() = runTest {

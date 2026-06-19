@@ -16,6 +16,7 @@ import pro.d11l.fitcoach.data.MemoryRepository
 import pro.d11l.fitcoach.data.OnboardingRepository
 import pro.d11l.fitcoach.data.ReadinessRepository
 import pro.d11l.fitcoach.data.RoomMemoryCache
+import pro.d11l.fitcoach.data.RoomSessionCache
 import pro.d11l.fitcoach.data.SessionRepository
 import pro.d11l.fitcoach.healthconnect.HealthConnectSource
 
@@ -28,6 +29,7 @@ class AppContainer(context: Context) {
     private val api = NetworkModule.create(BuildConfig.BACKEND_BASE_URL, tokenStorage)
     private val db = FitCoachDatabase.create(context.applicationContext)
     private val memoryCache = RoomMemoryCache(db.memorySectionDao())
+    private val sessionCache = RoomSessionCache(db.sessionDao(), NetworkModule.json)
 
     val authRepository = AuthRepository(api, tokenStorage, memoryCache)
     val memoryRepository = MemoryRepository(api, memoryCache)
@@ -44,5 +46,5 @@ class AppContainer(context: Context) {
     val healthSignalsRepository = HealthSignalsRepository(recoverySignalSource, api, consentRepository)
 
     val injuryRepository = InjuryRepository(api)
-    val sessionRepository = SessionRepository(api)
+    val sessionRepository = SessionRepository(api, sessionCache)
 }

@@ -42,6 +42,15 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Make the exported Room schemas available to MigrationTestHelper.
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
+}
+
+// Export Room schemas so migrations can be validated against a committed baseline
+// (MigrationTestHelper reads from here). See core/db/FitCoachDatabase.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -74,4 +83,14 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

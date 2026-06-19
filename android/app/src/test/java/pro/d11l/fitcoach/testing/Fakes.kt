@@ -33,8 +33,11 @@ import pro.d11l.fitcoach.core.network.PutSectionRequest
 import pro.d11l.fitcoach.core.network.RefreshRequest
 import pro.d11l.fitcoach.core.network.ResetRequest
 import pro.d11l.fitcoach.core.network.TokenPair
+import pro.d11l.fitcoach.core.network.SessionDto
 import pro.d11l.fitcoach.data.CachedSection
+import pro.d11l.fitcoach.data.CachedSession
 import pro.d11l.fitcoach.data.MemoryCache
+import pro.d11l.fitcoach.data.SessionCache
 import retrofit2.Response
 
 /** In-memory TokenStorage for tests. */
@@ -62,6 +65,24 @@ class FakeMemoryCache(private var sections: List<CachedSection> = emptyList()) :
     override suspend fun clear() {
         clearCalled = true
         sections = emptyList()
+    }
+}
+
+/** In-memory SessionCache for tests; records the last saved session. */
+class FakeSessionCache(private var cached: CachedSession? = null) : SessionCache {
+    var clearCalled = false
+        private set
+
+    override suspend fun save(session: SessionDto, clientSessionId: String): CachedSession {
+        val entry = CachedSession(clientSessionId, session, status = "active", completedAt = null)
+        cached = entry
+        return entry
+    }
+
+    override suspend fun latest(): CachedSession? = cached
+    override suspend fun clear() {
+        clearCalled = true
+        cached = null
     }
 }
 
@@ -283,12 +304,15 @@ class FakeApi : FitCoachApi {
 
     // sessions
     var sessionResponse: Response<pro.d11l.fitcoach.core.network.SessionDto>? = null
+    var generateThrows: Boolean = false
     var replanResponse: pro.d11l.fitcoach.core.network.ReplanCheckDto =
         pro.d11l.fitcoach.core.network.ReplanCheckDto(replanNeeded = false)
     var lastReplanSince: String? = null
 
-    override suspend fun generateSession(): Response<pro.d11l.fitcoach.core.network.SessionDto> =
-        sessionResponse ?: errorResponse(500)
+    override suspend fun generateSession(): Response<pro.d11l.fitcoach.core.network.SessionDto> {
+        if (generateThrows) throw java.io.IOException("offline")
+        return sessionResponse ?: errorResponse(500)
+    }
 
     override suspend fun replanCheck(since: String): Response<pro.d11l.fitcoach.core.network.ReplanCheckDto> {
         lastReplanSince = since
