@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import pro.d11l.fitcoach.core.designsystem.MedicalDisclaimer
 import pro.d11l.fitcoach.data.PlanSet
 
@@ -201,10 +202,16 @@ private fun SessionCompleteCard(state: SessionUiState, vm: SessionViewModel) {
 private fun formatClock(totalSec: Int): String = "%d:%02d".format(totalSec / 60, totalSec % 60)
 
 /** Plays a short beep and a vibration when a rest ends (E6-PR3). Offline. */
-private fun playRestCue(context: Context) {
+private suspend fun playRestCue(context: Context) {
     runCatching {
-        ToneGenerator(AudioManager.STREAM_ALARM, 80).apply {
-            startTone(ToneGenerator.TONE_PROP_BEEP, 250)
+        val tone = ToneGenerator(AudioManager.STREAM_ALARM, 80)
+        try {
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
+            delay(300)
+        } finally {
+            // Release the native AudioTrack once the tone has played so it does
+            // not leak on every rest-end cue.
+            tone.release()
         }
     }
     runCatching {
