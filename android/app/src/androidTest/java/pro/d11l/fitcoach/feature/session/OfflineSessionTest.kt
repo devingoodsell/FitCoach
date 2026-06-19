@@ -24,6 +24,7 @@ import pro.d11l.fitcoach.core.auth.TokenStorage
 import pro.d11l.fitcoach.core.auth.Tokens
 import pro.d11l.fitcoach.core.db.FitCoachDatabase
 import pro.d11l.fitcoach.core.network.NetworkModule
+import pro.d11l.fitcoach.data.LoggedSetState
 import pro.d11l.fitcoach.data.RoomSessionCache
 import pro.d11l.fitcoach.data.SessionRepository
 import pro.d11l.fitcoach.data.WorkoutSyncManager
@@ -97,6 +98,33 @@ class OfflineSessionTest {
             compose.onAllNodesWithText("Goblet box squat").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Goblet box squat").assertIsDisplayed()
+    }
+
+    @Test
+    fun fullSessionLogsCompletesAndQueuesOffline() = kotlinx.coroutines.runBlocking {
+        // End-to-end over real Room with radios off: log every set, build the
+        // completion payload, mark complete, and queue the sync (E5-PR5 + E6 + E12-PR2).
+        val sample = sampleSession()
+        val cache = RoomSessionCache(db.sessionDao(), NetworkModule.json)
+        cache.save(sample, "csid-e2e")
+
+        val plan = cache.loadPlan()!!
+        plan.steps.forEach {
+            cache.logSet(it.setId, LoggedSetState(repsDone = it.prescription.reps, loadKgDone = it.prescription.loadKg, completed = true))
+        }
+
+        val payload = CompletionAssembler.build(cache.loadPlan()!!)
+        assertEquals("completed", payload.status)
+
+        val api = NetworkModule.create(BuildConfig.BACKEND_BASE_URL, noTokens)
+        val sync = WorkoutSyncManager(api, db.workoutOutboxDao(), NetworkModule.json)
+        sync.enqueue(plan.clientSessionId, payload, performedAt = "2026-06-19T09:00:00Z")
+        cache.markCompleted(plan.sessionId, "2026-06-19T09:00:00Z")
+
+        val result = sync.sync() // offline: stays queued
+        assertEquals(0, result.synced)
+        assertEquals(1, db.workoutOutboxDao().count())
+        assertEquals("completed", cache.latest()?.status)
     }
 
     @Test
