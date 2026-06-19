@@ -31,9 +31,11 @@ fun ReadinessScreen(viewModel: ReadinessViewModel, onBack: () -> Unit) {
             state.loading -> Text("Loading…", style = MaterialTheme.typography.bodyMedium)
             state.isUnavailable || state.readiness == null ->
                 Text(
-                    "Not enough recovery data yet. Connect a wearable through Health Connect " +
-                        "(coming soon) or check back after a few nights of data. You can train in " +
-                        "manual mode in the meantime.",
+                    // A case-specific hint from the last ingest, else a generic prompt.
+                    state.hint
+                        ?: "Not enough recovery data yet. Connect a wearable through Health Connect " +
+                        "or check back after a few nights of data. You can train in manual mode " +
+                        "in the meantime.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             else -> {
