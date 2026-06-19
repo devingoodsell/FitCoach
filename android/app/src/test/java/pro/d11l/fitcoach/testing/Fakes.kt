@@ -34,8 +34,21 @@ import pro.d11l.fitcoach.core.network.PutSectionRequest
 import pro.d11l.fitcoach.core.network.RefreshRequest
 import pro.d11l.fitcoach.core.network.ResetRequest
 import pro.d11l.fitcoach.core.network.TokenPair
+import kotlinx.serialization.json.Json
+import pro.d11l.fitcoach.core.db.SessionWithExercises
+import pro.d11l.fitcoach.core.db.WorkoutOutboxDao
+import pro.d11l.fitcoach.core.db.WorkoutOutboxEntity
+import pro.d11l.fitcoach.core.network.SessionDto
+import pro.d11l.fitcoach.core.network.WorkoutLogDto
+import pro.d11l.fitcoach.core.network.WorkoutLogRequest
 import pro.d11l.fitcoach.data.CachedSection
+import pro.d11l.fitcoach.data.CachedSession
+import pro.d11l.fitcoach.data.LoggedSetState
 import pro.d11l.fitcoach.data.MemoryCache
+import pro.d11l.fitcoach.data.SessionCache
+import pro.d11l.fitcoach.data.SessionPlan
+import pro.d11l.fitcoach.data.toCacheGraph
+import pro.d11l.fitcoach.data.toSessionPlan
 import pro.d11l.fitcoach.healthconnect.RecoverySignalSource
 import pro.d11l.fitcoach.healthconnect.SignalSourceStatus
 import retrofit2.Response
@@ -66,6 +79,63 @@ class FakeMemoryCache(private var sections: List<CachedSection> = emptyList()) :
     override suspend fun clear() {
         clearCalled = true
         sections = emptyList()
+    }
+}
+
+/** In-memory SessionCache for tests; records the last saved session and set logs. */
+class FakeSessionCache(private var cached: CachedSession? = null) : SessionCache {
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    var clearCalled = false
+        private set
+    val loggedSets = mutableListOf<Pair<Long, LoggedSetState>>()
+    var completedAt: String? = null
+        private set
+
+    override suspend fun save(session: SessionDto, clientSessionId: String): CachedSession {
+        val entry = CachedSession(clientSessionId, session, status = "active", completedAt = null)
+        cached = entry
+        return entry
+    }
+
+    override suspend fun latest(): CachedSession? = cached
+
+    override suspend fun loadPlan(): SessionPlan? = cached?.let {
+        val (entity, exercises) = it.session.toCacheGraph(it.clientSessionId, json)
+        SessionWithExercises(entity, exercises).toSessionPlan(json)
+    }
+
+    override suspend fun logSet(setId: Long, logged: LoggedSetState) {
+        loggedSets.add(setId to logged)
+    }
+
+    override suspend fun markCompleted(sessionId: String, completedAt: String) {
+        this.completedAt = completedAt
+    }
+
+    override suspend fun clear() {
+        clearCalled = true
+        cached = null
+    }
+}
+
+/** In-memory WorkoutOutboxDao for tests (mirrors the Room DAO semantics). */
+class FakeWorkoutOutboxDao : WorkoutOutboxDao {
+    private val rows = linkedMapOf<String, WorkoutOutboxEntity>()
+
+    override suspend fun upsert(entry: WorkoutOutboxEntity) {
+        rows[entry.clientSessionId] = entry
+    }
+
+    override suspend fun pending(): List<WorkoutOutboxEntity> = rows.values.sortedBy { it.createdAt }
+    override suspend fun count(): Int = rows.size
+    override suspend fun delete(clientSessionId: String) {
+        rows.remove(clientSessionId)
+    }
+
+    override suspend fun markFailed(clientSessionId: String, error: String?) {
+        rows[clientSessionId]?.let {
+            rows[clientSessionId] = it.copy(attemptCount = it.attemptCount + 1, lastError = error)
+        }
     }
 }
 
@@ -309,16 +379,43 @@ class FakeApi : FitCoachApi {
 
     // sessions
     var sessionResponse: Response<pro.d11l.fitcoach.core.network.SessionDto>? = null
+    var generateThrows: Boolean = false
     var replanResponse: pro.d11l.fitcoach.core.network.ReplanCheckDto =
         pro.d11l.fitcoach.core.network.ReplanCheckDto(replanNeeded = false)
     var lastReplanSince: String? = null
 
-    override suspend fun generateSession(): Response<pro.d11l.fitcoach.core.network.SessionDto> =
-        sessionResponse ?: errorResponse(500)
+    override suspend fun generateSession(): Response<pro.d11l.fitcoach.core.network.SessionDto> {
+        if (generateThrows) throw java.io.IOException("offline")
+        return sessionResponse ?: errorResponse(500)
+    }
 
     override suspend fun replanCheck(since: String): Response<pro.d11l.fitcoach.core.network.ReplanCheckDto> {
         lastReplanSince = since
         return Response.success(replanResponse)
+    }
+
+    // workouts: idempotent backend simulation keyed by client_session_id (upsert),
+    // mirroring memory.RecordWorkout. recordWorkoutPostCount tracks total posts so
+    // tests can distinguish replays (posts) from stored records (recordedWorkouts).
+    val recordedWorkouts = linkedMapOf<String, WorkoutLogRequest>()
+    var recordWorkoutPostCount = 0
+        private set
+    var failWorkoutFor: Set<String> = emptySet()
+    var recordWorkoutThrows = false
+
+    override suspend fun recordWorkout(body: WorkoutLogRequest): Response<WorkoutLogDto> {
+        recordWorkoutPostCount++
+        if (recordWorkoutThrows) throw java.io.IOException("offline")
+        if (body.clientSessionId in failWorkoutFor) return errorResponse(500)
+        recordedWorkouts[body.clientSessionId] = body // dedup on the idempotency key
+        return Response.success(
+            WorkoutLogDto(
+                id = "wl-${body.clientSessionId}",
+                clientSessionId = body.clientSessionId,
+                schemaVersion = 1,
+                performedAt = body.performedAt,
+            ),
+        )
     }
 }
 

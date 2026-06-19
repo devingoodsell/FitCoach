@@ -130,4 +130,9 @@ interface FitCoachApi {
 
     @GET("sessions/replan-check")
     suspend fun replanCheck(@Query("since") since: String): Response<ReplanCheckDto>
+
+    // Record a completed (or partial) session. Idempotent on client_session_id:
+    // the backend upserts, so replaying a queued log never duplicates (E12-PR2).
+    @POST("workouts")
+    suspend fun recordWorkout(@Body body: WorkoutLogRequest): Response<WorkoutLogDto>
 }

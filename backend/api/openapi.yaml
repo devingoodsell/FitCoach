@@ -893,7 +893,47 @@ components:
       properties:
         client_session_id: { type: string, maxLength: 64, description: Idempotency key }
         performed_at: { type: string, format: date-time }
-        data: { type: object, description: Logged session (exercises, reps, weight, rests, autoreg events) }
+        data:
+          $ref: "#/components/schemas/WorkoutLogData"
+          description: >-
+            As-performed session. The backend stores this opaquely (no server-side
+            validation); this schema documents the client contract (E12-PR2).
+
+    # As-performed session payload (the `data` field above). Defined client-side in
+    # E12-PR2 since the backend treats it as opaque JSON; documented here so client
+    # and server share one shape for the logged session.
+    WorkoutLogData:
+      type: object
+      required: [session_id, status]
+      properties:
+        session_id: { type: string, description: The generated Session.id this log is for }
+        schema_version: { type: integer, default: 1 }
+        status: { type: string, enum: [completed, partial] }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/LoggedExercise" }
+
+    LoggedExercise:
+      type: object
+      required: [block_type, name, movement]
+      properties:
+        block_type: { type: string, enum: [warmup, main, accessory, aging] }
+        name: { type: string }
+        movement: { type: string }
+        sets:
+          type: array
+          items: { $ref: "#/components/schemas/LoggedSet" }
+
+    LoggedSet:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [reps, time, distance] }
+        reps_done: { type: integer }
+        load_kg: { type: number }
+        rpe_actual: { type: number }
+        duration_done_sec: { type: integer }
+        skipped: { type: boolean, default: false }
 
     WorkoutLog:
       type: object
